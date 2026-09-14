@@ -301,6 +301,15 @@
   --group-a: var(--ds-purple-700);
   --group-b: var(--ds-teal-700);
   --group-c: var(--ds-pink-700);
+  --group-d: var(--ds-blue-700);
+
+  /* --- Nhóm CHTK: chấm nhận diện ở header nhóm và menu lọc ---------------- */
+  /* Chỉ dùng làm chấm nhỏ, không bao giờ tô nền hay báo đúng/sai. */
+  --cat-facade: var(--ds-blue-700);
+  --cat-dimension: var(--ds-teal-700);
+  --cat-stair-ramp: var(--ds-amber-700);
+  --cat-structure: var(--ds-purple-700);
+  --cat-finishing: var(--ds-pink-700);
 
   /* --- Confidence: không cạnh tranh màu với status ----------------------- */
   --confidence-high: var(--ds-gray-700); /* trung tính, không gây nhiễu */
@@ -407,6 +416,13 @@
   --color-group-a: var(--group-a);
   --color-group-b: var(--group-b);
   --color-group-c: var(--group-c);
+  --color-group-d: var(--group-d);
+
+  --color-cat-facade: var(--cat-facade);
+  --color-cat-dimension: var(--cat-dimension);
+  --color-cat-stair-ramp: var(--cat-stair-ramp);
+  --color-cat-structure: var(--cat-structure);
+  --color-cat-finishing: var(--cat-finishing);
 
   --color-confidence-high: var(--confidence-high);
   --color-confidence-low: var(--confidence-low);

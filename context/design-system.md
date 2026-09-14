@@ -63,25 +63,44 @@ Mỗi status có bộ 3: `--status-X` (fill đặc, chấm, viền trái dòng),
 
 Mức độ và status là hai trục độc lập: mức độ nói vi phạm nặng tới đâu, status nói tiêu chí kết luận ra sao.
 
-### 3.3 ReasoningGroup — nhóm trích xuất
+### 3.3 CheckType — loại kiểm tra
 
-`A | B | C` — cách máy lấy được dữ liệu cho tiêu chí, quyết định khoảng độ tin cậy kỳ vọng.
+`A | B | C | D` — cách máy đối chiếu tiêu chí, quyết định khoảng độ tin cậy kỳ vọng. Nguồn sự thật: `shared/constants/domain.ts` (`CHECK_TYPE_CONFIG`).
 
-| Nhóm | Phương pháp | Tin cậy kỳ vọng | Token |
+| Mã | Loại kiểm tra | Tin cậy kỳ vọng | Token |
 |---|---|---|---|
-| A | Đối chiếu kích thước — OCR chuỗi cote, chuẩn hóa đơn vị, so ngưỡng | 85–95% | `--group-a` purple-700 |
-| B | Đối chiếu vật liệu / thông số — regex ghi chú kèm ngữ cảnh | 70–85% | `--group-b` teal-700 |
-| C | Kiểm tra sự hiện diện chi tiết — VLM đọc mặt cắt, không có số để so | 55–70% | `--group-c` pink-700 |
+| A | Đối chiếu số đo | 85–95% | `--group-a` purple-700 |
+| B | Đối chiếu vật liệu / thông số | 70–85% | `--group-b` teal-700 |
+| C | Phân tích hình học | 55–70% | `--group-c` pink-700 |
+| D | Phán đoán chủ quan | dưới 55% | `--group-d` blue-700 |
 
-Chip nhóm giữ **trung tính**, chỉ điểm màu bằng một chấm nhỏ, để không cạnh tranh với màu status. Hover hoặc focus vào chip thì hiện khung giải thích phương pháp và khoảng tin cậy.
+Chip loại kiểm tra giữ **trung tính**, chỉ điểm màu bằng chấm nhỏ hoặc badge nền mờ 15%, để không cạnh tranh với màu status. Hover thì hiện khung giải thích phương pháp và khoảng tin cậy.
+
+`ReasoningGroup` là tên cũ, nay là alias của `CheckType`.
+
+### 3.3b HouseType & ComparisonOperator
+
+`HouseType`: `shophouse | townhouse | semi-villa | single-villa | shop-villa`. Đủ cả năm thì hiển thị gọn là "Mọi loại nhà" (`houseTypeScopeLabel`).
+
+`ComparisonOperator`: `gte | lte | eq | between | in-list | pattern | required | forbidden` → Tối thiểu (≥) · Tối đa (≤) · Bằng đúng (=) · Trong khoảng · Thuộc danh sách · Khớp mẫu · Phải có · Không được có.
+
+Cả hai đều hiển thị bằng chip trung tính, **không tô màu**.
 
 ### 3.4 ChtkCategory — nhóm tiêu chuẩn CHTK
 
-`facade | dimension | stair-ramp | structure | finishing` → Mặt ngoài / Kích thước / Thang - Ramp / Cấu tạo / Hoàn thiện.
+`facade | dimension | stair-ramp | structure | finishing`
 
-Suy ra từ chữ số đầu của chỉ mục tiêu chí: 1.x → Mặt ngoài, 2.x → Kích thước, 3.x → Thang - Ramp, 4.x → Cấu tạo, 5.x → Hoàn thiện. Dùng `categoryFromRuleIndex()`.
+| Mã | Tên đầy đủ | Tên rút gọn | Chấm màu |
+|---|---|---|---|
+| 1.x | Mặt ngoài công trình | Mặt ngoài | `--cat-facade` blue-700 |
+| 2.x | Kích thước công trình | Kích thước | `--cat-dimension` teal-700 |
+| 3.x | Thang bộ – Ramp hầm | Thang – Ramp | `--cat-stair-ramp` amber-700 |
+| 4.x | Chi tiết cấu tạo điển hình | Cấu tạo | `--cat-structure` purple-700 |
+| 5.x | Chi tiết hoàn thiện điển hình | Hoàn thiện | `--cat-finishing` pink-700 |
 
-Hiển thị bằng chip viền, **không tô màu** — một dòng đã có màu mức độ và màu status, thêm năm hue nữa là quá tải.
+Suy ra từ chữ số đầu của mã tiêu chí, dùng `categoryFromRuleIndex()`.
+
+Quy ước hiển thị: **header nhóm và menu lọc** dùng tên đầy đủ kèm chấm màu; **dòng dữ liệu dày** (dòng tiêu chí ở trang findings) dùng tên rút gọn để không làm lõm cột. Chấm màu nhóm CHTK chỉ là chấm nhỏ nhận diện — không bao giờ tô nền, không bao giờ báo đúng/sai.
 
 ### 3.5 ReviewStatus / ProcessingState
 

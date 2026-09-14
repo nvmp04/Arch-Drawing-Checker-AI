@@ -7,10 +7,8 @@ import {
   XIcon,
 } from "@/shared/components/icons";
 import type {
-  ChtkCategory,
   FindingSeverity,
   FindingStatus,
-  ReasoningGroup,
 } from "@/shared/constants/enums";
 
 type IconComponent = (props: { className?: string }) => React.ReactElement;
@@ -107,68 +105,17 @@ export const SEVERITY_ORDER: readonly FindingSeverity[] = [
 ];
 
 /* -------------------------------------------------------------------------- */
-/* Nhóm trích xuất A / B / C                                                   */
+/* Loại kiểm tra & nhóm CHTK — nguồn sự thật ở shared/constants/domain.ts      */
 /* -------------------------------------------------------------------------- */
 
-export const GROUP_CONFIG: Record<
-  ReasoningGroup,
-  { title: string; method: string; expectedConfidence: string; dot: string }
-> = {
-  A: {
-    title: "Nhóm A — Đối chiếu kích thước",
-    method:
-      "OCR chuỗi kích thước / cote trên bản vẽ, chuẩn hóa đơn vị rồi so với ngưỡng trong bảng tiêu chuẩn.",
-    expectedConfidence: "85–95%",
-    dot: "bg-group-a",
-  },
-  B: {
-    title: "Nhóm B — Đối chiếu vật liệu / thông số",
-    method:
-      "Regex trên ghi chú bản vẽ kèm ngữ cảnh, so với cột tiêu chuẩn áp dụng.",
-    expectedConfidence: "70–85%",
-    dot: "bg-group-b",
-  },
-  C: {
-    title: "Nhóm C — Kiểm tra sự hiện diện của chi tiết",
-    method:
-      "VLM đọc mặt cắt và ghi chú để xác định chi tiết có được thể hiện hay không; không có giá trị số để đối chiếu.",
-    expectedConfidence: "55–70%",
-    dot: "bg-group-c",
-  },
-};
+export {
+  CATEGORY_CONFIG,
+  CATEGORY_ORDER,
+  categoryFromRuleIndex,
+} from "@/shared/constants/domain";
 
-/* -------------------------------------------------------------------------- */
-/* Nhóm CHTK                                                                   */
-/* -------------------------------------------------------------------------- */
-
-export const CATEGORY_CONFIG: Record<ChtkCategory, { label: string }> = {
-  facade: { label: "Mặt ngoài" },
-  dimension: { label: "Kích thước" },
-  "stair-ramp": { label: "Thang - Ramp" },
-  structure: { label: "Cấu tạo" },
-  finishing: { label: "Hoàn thiện" },
-};
-
-export const CATEGORY_ORDER: readonly ChtkCategory[] = [
-  "facade",
-  "dimension",
-  "stair-ramp",
-  "structure",
-  "finishing",
-];
-
-/** Chữ số đầu của chỉ mục quyết định nhóm CHTK: 1.x → Mặt ngoài, 2.x → Kích thước... */
-export function categoryFromRuleIndex(ruleIndex: string): ChtkCategory {
-  const section = ruleIndex.split(".")[0];
-  const map: Record<string, ChtkCategory> = {
-    "1": "facade",
-    "2": "dimension",
-    "3": "stair-ramp",
-    "4": "structure",
-    "5": "finishing",
-  };
-  return map[section] ?? "structure";
-}
+/** @deprecated Dùng CHECK_TYPE_CONFIG trong shared/constants/domain.ts. */
+export { CHECK_TYPE_CONFIG as GROUP_CONFIG } from "@/shared/constants/domain";
 
 /** Dưới ngưỡng này thì kết luận của máy phải được người xác nhận. */
 export const CONFIDENCE_THRESHOLD = 0.8;

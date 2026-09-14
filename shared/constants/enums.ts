@@ -11,17 +11,39 @@ export type FindingStatus =
 export type FindingSeverity = "low" | "medium" | "high" | "critical";
 
 /**
- * Nhóm trích xuất — cách máy lấy được dữ liệu cho tiêu chí này.
+ * Loại kiểm tra — cách máy đối chiếu tiêu chí.
  * Quyết định khoảng độ tin cậy kỳ vọng, không phải mức độ nghiêm trọng.
+ * A. Đối chiếu số đo · B. Đối chiếu vật liệu / thông số
+ * C. Phân tích hình học · D. Phán đoán chủ quan
  */
-export type ReasoningGroup = "A" | "B" | "C";
+export type CheckType = "A" | "B" | "C" | "D";
 
-/** Nhóm tiêu chuẩn CHTK — suy ra từ chữ số đầu của chỉ mục tiêu chí. */
+/** @deprecated Dùng CheckType. Giữ tên cũ để code findings không gãy. */
+export type ReasoningGroup = CheckType;
+
+/** Nhóm tiêu chuẩn CHTK — suy ra từ chữ số đầu của mã tiêu chí. */
 export type ChtkCategory =
   | "facade" // 1.x — Mặt ngoài
   | "dimension" // 2.x — Kích thước
-  | "stair-ramp" // 3.x — Thang - Ramp
+  | "stair-ramp" // 3.x — Thang – Ramp
   | "structure" // 4.x — Cấu tạo
   | "finishing"; // 5.x — Hoàn thiện
 
-export type HouseType = "apartment" | "villa" | "townhouse";
+/** Loại nhà mà một quy tắc áp dụng. */
+export type HouseType =
+  | "shophouse"
+  | "townhouse"
+  | "semi-villa"
+  | "single-villa"
+  | "shop-villa";
+
+/** Phép so sánh của một quy tắc. */
+export type ComparisonOperator =
+  | "gte" // Tối thiểu (≥)
+  | "lte" // Tối đa (≤)
+  | "eq" // Bằng đúng (=)
+  | "between" // Trong khoảng
+  | "in-list" // Thuộc danh sách
+  | "pattern" // Khớp mẫu
+  | "required" // Phải có
+  | "forbidden"; // Không được có
