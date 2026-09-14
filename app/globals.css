@@ -245,36 +245,49 @@
   --accent-subtle: var(--ds-blue-100); /* nền badge/alert info */
   --accent-text: var(--ds-blue-900); /* link, chữ trên nền subtle */
 
-  /* --- Verdict: kết luận của một check (pass / fail / warn / na) --------- */
-  --verdict-pass: var(--ds-green-700);
-  --verdict-pass-subtle: var(--ds-green-100);
-  --verdict-pass-text: var(--ds-green-900);
+  /* --- FindingStatus: kết luận của một tiêu chí -------------------------- */
+  /* pass | fail | warning | pending | approved | unknown */
+  --status-pass: var(--ds-green-700); /* Đạt */
+  --status-pass-subtle: var(--ds-green-100);
+  --status-pass-text: var(--ds-green-900);
 
-  --verdict-fail: var(--ds-red-700);
-  --verdict-fail-subtle: var(--ds-red-100);
-  --verdict-fail-text: var(--ds-red-900);
+  --status-fail: var(--ds-red-700); /* Không đạt */
+  --status-fail-subtle: var(--ds-red-100);
+  --status-fail-text: var(--ds-red-900);
 
-  --verdict-warn: var(--ds-amber-700);
-  --verdict-warn-subtle: var(--ds-amber-100);
-  --verdict-warn-text: var(--ds-amber-900);
+  --status-warning: var(--ds-amber-700); /* Cảnh báo */
+  --status-warning-subtle: var(--ds-amber-100);
+  --status-warning-text: var(--ds-amber-900);
 
-  --verdict-na: var(--ds-gray-700); /* not applicable / chưa chạy */
-  --verdict-na-subtle: var(--ds-gray-100);
-  --verdict-na-text: var(--ds-gray-900);
+  --status-pending: var(--ds-blue-700); /* Chờ người thẩm định */
+  --status-pending-subtle: var(--ds-blue-100);
+  --status-pending-text: var(--ds-blue-900);
 
-  /* --- FindingStatus: trạng thái xử lý của finding ----------------------- */
-  /* open | resolved | dismissed  (shared/constants/enums.ts) */
-  --finding-open: var(--ds-blue-700);
-  --finding-open-subtle: var(--ds-blue-100);
-  --finding-open-text: var(--ds-blue-900);
+  --status-approved: var(--ds-teal-700); /* Đã duyệt — người đã xác nhận */
+  --status-approved-subtle: var(--ds-teal-100);
+  --status-approved-text: var(--ds-teal-900);
 
-  --finding-resolved: var(--ds-green-700);
-  --finding-resolved-subtle: var(--ds-green-100);
-  --finding-resolved-text: var(--ds-green-900);
+  --status-unknown: var(--ds-gray-700); /* Không xác định */
+  --status-unknown-subtle: var(--ds-gray-100);
+  --status-unknown-text: var(--ds-gray-900);
 
-  --finding-dismissed: var(--ds-gray-700);
-  --finding-dismissed-subtle: var(--ds-gray-100);
-  --finding-dismissed-text: var(--ds-gray-900);
+  /* --- Severity: thang cường độ một sắc, không phải bộ hue --------------- */
+  /* low | medium | high | critical */
+  --sev-low: var(--ds-gray-600);
+  --sev-low-subtle: var(--ds-gray-100);
+  --sev-low-text: var(--ds-gray-900);
+
+  --sev-medium: var(--ds-amber-700);
+  --sev-medium-subtle: var(--ds-amber-100);
+  --sev-medium-text: var(--ds-amber-900);
+
+  --sev-high: var(--ds-red-700);
+  --sev-high-subtle: var(--ds-red-100);
+  --sev-high-text: var(--ds-red-900);
+
+  --sev-critical: var(--ds-red-900);
+  --sev-critical-subtle: var(--ds-red-200);
+  --sev-critical-text: var(--ds-red-1000);
 
   /* --- ReviewStatus / ProcessingState ------------------------------------ */
   /* draft | processing | completed ; idle | running | failed */
@@ -283,13 +296,13 @@
   --review-completed: var(--ds-green-700);
   --review-failed: var(--ds-red-700);
 
-  /* --- ReasoningGroup: nhóm lý do của finding ---------------------------- */
-  /* compliance | geometry | documentation  (shared/constants/enums.ts) */
-  --group-compliance: var(--ds-purple-700);
-  --group-geometry: var(--ds-teal-700);
-  --group-documentation: var(--ds-pink-700);
+  /* --- ReasoningGroup: cách máy trích xuất tiêu chí ---------------------- */
+  /* A | B | C — chỉ để phân loại, không bao giờ báo đúng/sai */
+  --group-a: var(--ds-purple-700);
+  --group-b: var(--ds-teal-700);
+  --group-c: var(--ds-pink-700);
 
-  /* --- Confidence: không cạnh tranh màu với verdict ----------------------- */
+  /* --- Confidence: không cạnh tranh màu với status ----------------------- */
   --confidence-high: var(--ds-gray-700); /* trung tính, không gây nhiễu */
   --confidence-low: var(--ds-amber-700); /* dưới ngưỡng → cần người xác nhận */
 
@@ -297,7 +310,7 @@
   --canvas-paper: hsl(0, 0%, 100%);
   --canvas-backdrop: var(--ds-gray-300);
   --canvas-annotation-fail: var(--ds-red-700);
-  --canvas-annotation-warn: var(--ds-amber-700);
+  --canvas-annotation-warning: var(--ds-amber-700);
   --canvas-annotation-pass: var(--ds-green-700);
 
   /* Layout */
@@ -354,37 +367,46 @@
   --color-accent-subtle: var(--accent-subtle);
   --color-accent-text: var(--accent-text);
 
-  --color-pass: var(--verdict-pass);
-  --color-pass-subtle: var(--verdict-pass-subtle);
-  --color-pass-text: var(--verdict-pass-text);
-  --color-fail: var(--verdict-fail);
-  --color-fail-subtle: var(--verdict-fail-subtle);
-  --color-fail-text: var(--verdict-fail-text);
-  --color-warn: var(--verdict-warn);
-  --color-warn-subtle: var(--verdict-warn-subtle);
-  --color-warn-text: var(--verdict-warn-text);
-  --color-na: var(--verdict-na);
-  --color-na-subtle: var(--verdict-na-subtle);
-  --color-na-text: var(--verdict-na-text);
+  --color-pass: var(--status-pass);
+  --color-pass-subtle: var(--status-pass-subtle);
+  --color-pass-text: var(--status-pass-text);
+  --color-fail: var(--status-fail);
+  --color-fail-subtle: var(--status-fail-subtle);
+  --color-fail-text: var(--status-fail-text);
+  --color-warning: var(--status-warning);
+  --color-warning-subtle: var(--status-warning-subtle);
+  --color-warning-text: var(--status-warning-text);
+  --color-pending: var(--status-pending);
+  --color-pending-subtle: var(--status-pending-subtle);
+  --color-pending-text: var(--status-pending-text);
+  --color-approved: var(--status-approved);
+  --color-approved-subtle: var(--status-approved-subtle);
+  --color-approved-text: var(--status-approved-text);
+  --color-unknown: var(--status-unknown);
+  --color-unknown-subtle: var(--status-unknown-subtle);
+  --color-unknown-text: var(--status-unknown-text);
 
-  --color-open: var(--finding-open);
-  --color-open-subtle: var(--finding-open-subtle);
-  --color-open-text: var(--finding-open-text);
-  --color-resolved: var(--finding-resolved);
-  --color-resolved-subtle: var(--finding-resolved-subtle);
-  --color-resolved-text: var(--finding-resolved-text);
-  --color-dismissed: var(--finding-dismissed);
-  --color-dismissed-subtle: var(--finding-dismissed-subtle);
-  --color-dismissed-text: var(--finding-dismissed-text);
+  --color-sev-low: var(--sev-low);
+  --color-sev-low-subtle: var(--sev-low-subtle);
+  --color-sev-low-text: var(--sev-low-text);
+  --color-sev-medium: var(--sev-medium);
+  --color-sev-medium-subtle: var(--sev-medium-subtle);
+  --color-sev-medium-text: var(--sev-medium-text);
+  --color-sev-high: var(--sev-high);
+  --color-sev-high-subtle: var(--sev-high-subtle);
+  --color-sev-high-text: var(--sev-high-text);
+  --color-sev-critical: var(--sev-critical);
+  --color-sev-critical-subtle: var(--sev-critical-subtle);
+  --color-sev-critical-text: var(--sev-critical-text);
 
   --color-review-draft: var(--review-draft);
   --color-review-processing: var(--review-processing);
   --color-review-completed: var(--review-completed);
   --color-review-failed: var(--review-failed);
 
-  --color-group-compliance: var(--group-compliance);
-  --color-group-geometry: var(--group-geometry);
-  --color-group-documentation: var(--group-documentation);
+  --color-group-a: var(--group-a);
+  --color-group-b: var(--group-b);
+  --color-group-c: var(--group-c);
 
   --color-confidence-high: var(--confidence-high);
   --color-confidence-low: var(--confidence-low);

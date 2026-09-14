@@ -29,62 +29,71 @@ Bậc 700 của mọi màu **giống hệt nhau ở light và dark** — đó l�
 
 ## 3. Bảng ngữ nghĩa cho miền bài toán
 
-Tất cả bám theo enum thật trong `shared/constants/enums.ts`, `features/findings/types`, `features/reviews/types`. Thêm enum mới ở đó thì phải thêm token tương ứng ở đây.
+Tất cả bám theo enum thật trong `shared/constants/enums.ts`. Thêm enum mới ở đó thì phải thêm token tương ứng ở đây và trong `app/globals.css`.
 
-### 3.1 Verdict — kết luận của một lần kiểm tra
+### 3.1 FindingStatus — kết luận của một tiêu chí
 
-Đây là **trục màu chính** của app (feed vào `PassRateByGroupChart`, `ConclusionByCheckTypeChart`).
+Đây là **trục màu chính** của app.
 
-| Verdict | Token | Màu | Nhãn hiển thị |
+| Status | Nhãn | Token | Màu |
 |---|---|---|---|
-| pass | `--verdict-pass` | green-700 | Đạt |
-| fail | `--verdict-fail` | red-700 | Sai lệch |
-| warn | `--verdict-warn` | amber-700 | Cần kiểm tra |
-| na | `--verdict-na` | gray-700 | Không áp dụng |
+| `pass` | Đạt | `--status-pass` | green-700 |
+| `fail` | Không đạt | `--status-fail` | red-700 |
+| `warning` | Cảnh báo | `--status-warning` | amber-700 |
+| `pending` | Chờ người thẩm định | `--status-pending` | blue-700 |
+| `approved` | Đã duyệt | `--status-approved` | teal-700 |
+| `unknown` | Không xác định | `--status-unknown` | gray-700 |
 
-Mỗi verdict có bộ 3: `--verdict-X` (fill đặc, icon), `--verdict-X-subtle` (nền badge), `--verdict-X-text` (chữ trên nền subtle). Tailwind: `bg-pass-subtle text-pass-text`, `bg-fail`, ...
+Mỗi status có bộ 3: `--status-X` (fill đặc, chấm, viền trái dòng), `--status-X-subtle` (nền badge), `--status-X-text` (chữ trên nền subtle). Tailwind: `bg-fail-subtle text-fail-text`, `bg-pass`, `border-l-warning`, ...
 
-> Vì VLM/OCR không chắc chắn tuyệt đối, **warn là verdict hạng nhất**, không phải biến thể phụ của fail. Kết quả dưới ngưỡng tin cậy luôn là `warn` kèm số confidence, không được ép thành `fail`.
+> `warning` là status hạng nhất, không phải biến thể phụ của `fail`. Kết quả dưới ngưỡng tin cậy là `warning` hoặc `pending`, không được ép thành `fail`. `approved` nghĩa là người đã xác nhận kết luận của máy — khác với `pass` là máy tự kết luận đạt.
 
-### 3.2 FindingStatus — trạng thái xử lý (trục riêng, KHÔNG trộn với verdict)
+### 3.2 FindingSeverity — mức độ
 
-`open | resolved | dismissed`
+`low | medium | high | critical` → Thấp / Trung bình / Cao / Nghiêm trọng.
 
-| Status | Token | Màu |
+| Mức độ | Token | Màu |
 |---|---|---|
-| open | `--finding-open` | blue-700 |
-| resolved | `--finding-resolved` | green-700 |
-| dismissed | `--finding-dismissed` | gray-700 |
+| low | `--sev-low` | gray-600 |
+| medium | `--sev-medium` | amber-700 |
+| high | `--sev-high` | red-700 |
+| critical | `--sev-critical` | red-900 |
 
-Một finding có **hai thuộc tính độc lập**: máy kết luận gì (verdict) và người đã xử lý tới đâu (status). Trên UI không được gộp thành một badge. Quy ước: badge verdict đứng trước (trái), badge status đứng sau hoặc ở cột riêng.
+Đây là **thang cường độ một sắc**, không phải bộ hue phân loại — đọc được theo thứ tự tăng dần. Mức độ luôn kèm thanh dọc nhỏ để phân biệt được khi không nhận ra màu.
 
-### 3.3 ReviewStatus / ProcessingState
+Mức độ và status là hai trục độc lập: mức độ nói vi phạm nặng tới đâu, status nói tiêu chí kết luận ra sao.
 
-`draft | processing | completed` và `idle | running | failed`
+### 3.3 ReasoningGroup — nhóm trích xuất
+
+`A | B | C` — cách máy lấy được dữ liệu cho tiêu chí, quyết định khoảng độ tin cậy kỳ vọng.
+
+| Nhóm | Phương pháp | Tin cậy kỳ vọng | Token |
+|---|---|---|---|
+| A | Đối chiếu kích thước — OCR chuỗi cote, chuẩn hóa đơn vị, so ngưỡng | 85–95% | `--group-a` purple-700 |
+| B | Đối chiếu vật liệu / thông số — regex ghi chú kèm ngữ cảnh | 70–85% | `--group-b` teal-700 |
+| C | Kiểm tra sự hiện diện chi tiết — VLM đọc mặt cắt, không có số để so | 55–70% | `--group-c` pink-700 |
+
+Chip nhóm giữ **trung tính**, chỉ điểm màu bằng một chấm nhỏ, để không cạnh tranh với màu status. Hover hoặc focus vào chip thì hiện khung giải thích phương pháp và khoảng tin cậy.
+
+### 3.4 ChtkCategory — nhóm tiêu chuẩn CHTK
+
+`facade | dimension | stair-ramp | structure | finishing` → Mặt ngoài / Kích thước / Thang - Ramp / Cấu tạo / Hoàn thiện.
+
+Suy ra từ chữ số đầu của chỉ mục tiêu chí: 1.x → Mặt ngoài, 2.x → Kích thước, 3.x → Thang - Ramp, 4.x → Cấu tạo, 5.x → Hoàn thiện. Dùng `categoryFromRuleIndex()`.
+
+Hiển thị bằng chip viền, **không tô màu** — một dòng đã có màu mức độ và màu status, thêm năm hue nữa là quá tải.
+
+### 3.5 ReviewStatus / ProcessingState
+
+`draft | processing | completed` và `idle | running | failed`.
 
 `--review-draft` gray · `--review-processing` blue · `--review-completed` green · `--review-failed` red.
 
-### 3.4 ReasoningGroup
+### 3.6 Confidence
 
-`compliance | geometry | documentation`
+`--confidence-high` (gray-700, trung tính) và `--confidence-low` (amber-700), ngưỡng `CONFIDENCE_THRESHOLD = 0.8`.
 
-| Nhóm | Token | Màu |
-|---|---|---|
-| compliance | `--group-compliance` | purple-700 |
-| geometry | `--group-geometry` | teal-700 |
-| documentation | `--group-documentation` | pink-700 |
-
-Màu nhóm chỉ để **phân loại** (chấm tròn, viền trái, tag) — không bao giờ báo đúng/sai.
-
-### 3.5 Confidence
-
-`--confidence-high` (gray-700, trung tính) và `--confidence-low` (amber-700).
-
-Confidence cố tình **không dùng thang xanh–đỏ** để không cạnh tranh thị giác với verdict. Chỉ khi dưới ngưỡng mới đổi màu sang amber — trùng với màu của verdict `warn`, vì hai thứ này luôn đi cùng nhau.
-
-### Canvas xem bản vẽ
-
-`--canvas-paper` luôn trắng ở cả hai theme: bản vẽ kiến trúc là nét đen trên giấy trắng, đảo màu sẽ sai lệch cảm nhận. Nền quanh canvas dùng `--canvas-backdrop`. Annotation vẽ đè lên canvas dùng `--canvas-annotation-*` (bậc 700, tương phản tốt trên trắng).
+Confidence cố tình **không dùng thang xanh–đỏ** để không cạnh tranh thị giác với status. Chỉ khi dưới ngưỡng mới đổi sang amber.
 
 ## 4. Nền & phân tầng (elevation)
 
