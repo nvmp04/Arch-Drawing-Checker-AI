@@ -1,0 +1,498 @@
+/* ============================================================================
+ * globals.css — Design tokens (Geist / Vercel) cho Arch Drawing Checker AI
+ * ----------------------------------------------------------------------------
+ * Nguồn sự thật về màu/spacing/radius. KHÔNG hard-code màu ở component.
+ * 3 lớp:
+ *   1. Primitive  --ds-*         thang màu thô 100→1000, đổi theo theme
+ *   2. Semantic   --surface-*, --text-*, --border-*, --status-*
+ *                                ý nghĩa sử dụng — component chỉ dùng lớp này
+ *   3. Tailwind   @theme inline  map semantic + primitive thành utility class
+ *
+ * Theme mặc định: DARK (<html class="dark">). Light là biến thể.
+ * ==========================================================================*/
+
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+ * 1. PRIMITIVE — LIGHT
+ * -------------------------------------------------------------------------*/
+:root {
+  color-scheme: light;
+
+  /* Background */
+  --ds-background-100: hsl(0, 0%, 100%);
+  --ds-background-200: hsl(0, 0%, 98%);
+
+  /* Gray — nền, viền, chữ trung tính */
+  --ds-gray-100: hsl(0, 0%, 95%);
+  --ds-gray-200: hsl(0, 0%, 92%);
+  --ds-gray-300: hsl(0, 0%, 90%);
+  --ds-gray-400: hsl(0, 0%, 92%);
+  --ds-gray-500: hsl(0, 0%, 79%);
+  --ds-gray-600: hsl(0, 0%, 66%);
+  --ds-gray-700: hsl(0, 0%, 56%);
+  --ds-gray-800: hsl(0, 0%, 49%);
+  --ds-gray-900: hsl(0, 0%, 30%);
+  --ds-gray-1000: hsl(0, 0%, 9%);
+
+  /* Blue — link, primary action, info */
+  --ds-blue-100: hsl(212, 100%, 97%);
+  --ds-blue-200: hsl(210, 100%, 96%);
+  --ds-blue-300: hsl(210, 100%, 94%);
+  --ds-blue-400: hsl(209, 100%, 90%);
+  --ds-blue-500: hsl(209, 100%, 80%);
+  --ds-blue-600: hsl(208, 100%, 66%);
+  --ds-blue-700: hsl(212, 100%, 48%);
+  --ds-blue-800: hsl(212, 100%, 41%);
+  --ds-blue-900: hsl(211, 100%, 42%);
+  --ds-blue-1000: hsl(211, 100%, 15%);
+
+  /* Red — lỗi, destructive */
+  --ds-red-100: hsl(0, 100%, 97%);
+  --ds-red-200: hsl(0, 100%, 96%);
+  --ds-red-300: hsl(0, 100%, 95%);
+  --ds-red-400: hsl(0, 90%, 92%);
+  --ds-red-500: hsl(0, 82%, 85%);
+  --ds-red-600: hsl(359, 90%, 71%);
+  --ds-red-700: hsl(358, 75%, 59%);
+  --ds-red-800: hsl(358, 70%, 52%);
+  --ds-red-900: hsl(358, 66%, 48%);
+  --ds-red-1000: hsl(355, 49%, 15%);
+
+  /* Amber — warning */
+  --ds-amber-100: hsl(39, 100%, 95%);
+  --ds-amber-200: hsl(44, 100%, 92%);
+  --ds-amber-300: hsl(43, 96%, 90%);
+  --ds-amber-400: hsl(42, 100%, 78%);
+  --ds-amber-500: hsl(38, 100%, 71%);
+  --ds-amber-600: hsl(36, 90%, 62%);
+  --ds-amber-700: hsl(39, 100%, 57%);
+  --ds-amber-800: hsl(35, 100%, 52%);
+  --ds-amber-900: hsl(30, 100%, 32%);
+  --ds-amber-1000: hsl(20, 79%, 17%);
+
+  /* Green — success */
+  --ds-green-100: hsl(120, 60%, 96%);
+  --ds-green-200: hsl(120, 60%, 95%);
+  --ds-green-300: hsl(120, 60%, 91%);
+  --ds-green-400: hsl(122, 60%, 86%);
+  --ds-green-500: hsl(124, 60%, 75%);
+  --ds-green-600: hsl(125, 60%, 64%);
+  --ds-green-700: hsl(131, 41%, 46%);
+  --ds-green-800: hsl(132, 43%, 39%);
+  --ds-green-900: hsl(133, 50%, 32%);
+  --ds-green-1000: hsl(128, 29%, 15%);
+
+  /* Teal / Purple / Pink — màu phân loại (nhóm checklist, tag) */
+  --ds-teal-100: hsl(169, 70%, 96%);
+  --ds-teal-300: hsl(168, 70%, 90%);
+  --ds-teal-500: hsl(170, 70%, 72%);
+  --ds-teal-700: hsl(173, 80%, 36%);
+  --ds-teal-900: hsl(174, 91%, 25%);
+  --ds-teal-1000: hsl(171, 80%, 13%);
+
+  --ds-purple-100: hsl(276, 100%, 97%);
+  --ds-purple-300: hsl(274, 78%, 95%);
+  --ds-purple-500: hsl(274, 70%, 82%);
+  --ds-purple-700: hsl(272, 51%, 54%);
+  --ds-purple-900: hsl(274, 71%, 43%);
+  --ds-purple-1000: hsl(276, 100%, 15%);
+
+  --ds-pink-100: hsl(330, 100%, 96%);
+  --ds-pink-300: hsl(340, 82%, 94%);
+  --ds-pink-500: hsl(340, 75%, 84%);
+  --ds-pink-700: hsl(336, 80%, 58%);
+  --ds-pink-900: hsl(336, 65%, 45%);
+  --ds-pink-1000: hsl(333, 74%, 15%);
+
+  /* Shadow — luôn kèm viền hairline 1px */
+  --ds-shadow-border-base: 0 0 0 1px rgba(0, 0, 0, 0.08);
+  --ds-shadow-small: 0px 2px 2px rgba(0, 0, 0, 0.04);
+  --ds-shadow-medium: 0px 2px 2px rgba(0, 0, 0, 0.04),
+    0px 8px 8px -8px rgba(0, 0, 0, 0.04);
+  --ds-shadow-large: 0px 2px 2px rgba(0, 0, 0, 0.04),
+    0px 8px 16px -4px rgba(0, 0, 0, 0.04);
+  --ds-shadow-menu: var(--ds-shadow-border-base), 0px 1px 1px rgba(0, 0, 0, 0.02),
+    0px 4px 8px -4px rgba(0, 0, 0, 0.04), 0px 16px 24px -8px rgba(0, 0, 0, 0.06);
+  --ds-shadow-modal: var(--ds-shadow-border-base),
+    0px 1px 1px rgba(0, 0, 0, 0.02), 0px 8px 16px -4px rgba(0, 0, 0, 0.04),
+    0px 24px 32px -8px rgba(0, 0, 0, 0.06);
+}
+
+/* ---------------------------------------------------------------------------
+ * 1b. PRIMITIVE — DARK (mặc định của app)
+ * -------------------------------------------------------------------------*/
+.dark {
+  color-scheme: dark;
+
+  --ds-background-100: hsl(0, 0%, 4%);
+  --ds-background-200: hsl(0, 0%, 0%);
+
+  --ds-gray-100: hsl(0, 0%, 10%);
+  --ds-gray-200: hsl(0, 0%, 12%);
+  --ds-gray-300: hsl(0, 0%, 16%);
+  --ds-gray-400: hsl(0, 0%, 18%);
+  --ds-gray-500: hsl(0, 0%, 27%);
+  --ds-gray-600: hsl(0, 0%, 53%);
+  --ds-gray-700: hsl(0, 0%, 56%);
+  --ds-gray-800: hsl(0, 0%, 49%);
+  --ds-gray-900: hsl(0, 0%, 63%);
+  --ds-gray-1000: hsl(0, 0%, 93%);
+
+  --ds-blue-100: hsl(216, 50%, 12%);
+  --ds-blue-200: hsl(214, 59%, 15%);
+  --ds-blue-300: hsl(213, 71%, 20%);
+  --ds-blue-400: hsl(212, 78%, 23%);
+  --ds-blue-500: hsl(211, 86%, 27%);
+  --ds-blue-600: hsl(206, 100%, 50%);
+  --ds-blue-700: hsl(212, 100%, 48%);
+  --ds-blue-800: hsl(212, 100%, 41%);
+  --ds-blue-900: hsl(210, 100%, 66%);
+  --ds-blue-1000: hsl(206, 100%, 96%);
+
+  --ds-red-100: hsl(357, 37%, 12%);
+  --ds-red-200: hsl(357, 46%, 16%);
+  --ds-red-300: hsl(356, 54%, 22%);
+  --ds-red-400: hsl(357, 55%, 26%);
+  --ds-red-500: hsl(357, 60%, 32%);
+  --ds-red-600: hsl(358, 75%, 59%);
+  --ds-red-700: hsl(358, 75%, 59%);
+  --ds-red-800: hsl(358, 69%, 52%);
+  --ds-red-900: hsl(358, 100%, 69%);
+  --ds-red-1000: hsl(353, 90%, 96%);
+
+  --ds-amber-100: hsl(35, 100%, 8%);
+  --ds-amber-200: hsl(32, 100%, 10%);
+  --ds-amber-300: hsl(33, 100%, 15%);
+  --ds-amber-400: hsl(35, 100%, 17%);
+  --ds-amber-500: hsl(35, 91%, 22%);
+  --ds-amber-600: hsl(39, 85%, 49%);
+  --ds-amber-700: hsl(39, 100%, 57%);
+  --ds-amber-800: hsl(35, 100%, 52%);
+  --ds-amber-900: hsl(39, 90%, 50%);
+  --ds-amber-1000: hsl(40, 94%, 93%);
+
+  --ds-green-100: hsl(136, 50%, 9%);
+  --ds-green-200: hsl(137, 50%, 12%);
+  --ds-green-300: hsl(136, 50%, 14%);
+  --ds-green-400: hsl(135, 70%, 16%);
+  --ds-green-500: hsl(135, 70%, 23%);
+  --ds-green-600: hsl(135, 70%, 34%);
+  --ds-green-700: hsl(131, 41%, 46%);
+  --ds-green-800: hsl(132, 43%, 39%);
+  --ds-green-900: hsl(131, 43%, 57%);
+  --ds-green-1000: hsl(136, 73%, 94%);
+
+  --ds-teal-100: hsl(169, 78%, 7%);
+  --ds-teal-300: hsl(171, 75%, 13%);
+  --ds-teal-500: hsl(172, 85%, 20%);
+  --ds-teal-700: hsl(173, 80%, 36%);
+  --ds-teal-900: hsl(174, 90%, 41%);
+  --ds-teal-1000: hsl(166, 71%, 93%);
+
+  --ds-purple-100: hsl(283, 30%, 12%);
+  --ds-purple-300: hsl(279, 44%, 23%);
+  --ds-purple-500: hsl(274, 49%, 35%);
+  --ds-purple-700: hsl(272, 51%, 54%);
+  --ds-purple-900: hsl(275, 80%, 71%);
+  --ds-purple-1000: hsl(281, 73%, 96%);
+
+  --ds-pink-100: hsl(335, 32%, 12%);
+  --ds-pink-300: hsl(335, 47%, 21%);
+  --ds-pink-500: hsl(335, 57%, 27%);
+  --ds-pink-700: hsl(336, 80%, 58%);
+  --ds-pink-900: hsl(341, 90%, 67%);
+  --ds-pink-1000: hsl(333, 90%, 96%);
+
+  --ds-shadow-border-base: 0 0 0 1px rgba(255, 255, 255, 0.14);
+  --ds-shadow-small: 0px 1px 2px rgba(0, 0, 0, 0.16);
+  --ds-shadow-medium: 0px 2px 4px rgba(0, 0, 0, 0.24);
+  --ds-shadow-large: 0px 4px 16px rgba(0, 0, 0, 0.32);
+  --ds-shadow-menu: var(--ds-shadow-border-base), 0px 8px 24px rgba(0, 0, 0, 0.4);
+  --ds-shadow-modal: var(--ds-shadow-border-base),
+    0px 16px 48px rgba(0, 0, 0, 0.48);
+}
+
+/* ---------------------------------------------------------------------------
+ * 2. SEMANTIC — component CHỈ dùng lớp này
+ * -------------------------------------------------------------------------*/
+:root,
+.dark {
+  /* Surface — phân tầng bằng 2 lớp nền + viền, không dùng shadow nặng */
+  --surface-page: var(--ds-background-100); /* nền trang */
+  --surface-raised: var(--ds-background-200); /* card, panel, sidebar */
+  --surface-sunken: var(--ds-gray-100); /* input, code block, track */
+  --surface-hover: var(--ds-gray-200); /* hover row/item */
+  --surface-active: var(--ds-gray-300); /* selected row/item */
+
+  /* Text */
+  --text-primary: var(--ds-gray-1000); /* heading, nội dung chính */
+  --text-secondary: var(--ds-gray-900); /* body phụ, mô tả */
+  --text-muted: var(--ds-gray-700); /* label, caption, placeholder */
+  --text-on-accent: hsl(0, 0%, 100%); /* chữ trên nền accent đặc */
+
+  /* Border */
+  --border-subtle: var(--ds-gray-200); /* chia khối trong cùng nền */
+  --border-default: var(--ds-gray-300); /* viền card, input */
+  --border-strong: var(--ds-gray-500); /* hover input, divider nhấn */
+  --border-focus: var(--ds-blue-700); /* focus ring */
+
+  /* Accent — hành động chính */
+  --accent: var(--ds-blue-700);
+  --accent-hover: var(--ds-blue-800);
+  --accent-subtle: var(--ds-blue-100); /* nền badge/alert info */
+  --accent-text: var(--ds-blue-900); /* link, chữ trên nền subtle */
+
+  /* --- Verdict: kết luận của một check (pass / fail / warn / na) --------- */
+  --verdict-pass: var(--ds-green-700);
+  --verdict-pass-subtle: var(--ds-green-100);
+  --verdict-pass-text: var(--ds-green-900);
+
+  --verdict-fail: var(--ds-red-700);
+  --verdict-fail-subtle: var(--ds-red-100);
+  --verdict-fail-text: var(--ds-red-900);
+
+  --verdict-warn: var(--ds-amber-700);
+  --verdict-warn-subtle: var(--ds-amber-100);
+  --verdict-warn-text: var(--ds-amber-900);
+
+  --verdict-na: var(--ds-gray-700); /* not applicable / chưa chạy */
+  --verdict-na-subtle: var(--ds-gray-100);
+  --verdict-na-text: var(--ds-gray-900);
+
+  /* --- FindingStatus: trạng thái xử lý của finding ----------------------- */
+  /* open | resolved | dismissed  (shared/constants/enums.ts) */
+  --finding-open: var(--ds-blue-700);
+  --finding-open-subtle: var(--ds-blue-100);
+  --finding-open-text: var(--ds-blue-900);
+
+  --finding-resolved: var(--ds-green-700);
+  --finding-resolved-subtle: var(--ds-green-100);
+  --finding-resolved-text: var(--ds-green-900);
+
+  --finding-dismissed: var(--ds-gray-700);
+  --finding-dismissed-subtle: var(--ds-gray-100);
+  --finding-dismissed-text: var(--ds-gray-900);
+
+  /* --- ReviewStatus / ProcessingState ------------------------------------ */
+  /* draft | processing | completed ; idle | running | failed */
+  --review-draft: var(--ds-gray-700);
+  --review-processing: var(--ds-blue-700);
+  --review-completed: var(--ds-green-700);
+  --review-failed: var(--ds-red-700);
+
+  /* --- ReasoningGroup: nhóm lý do của finding ---------------------------- */
+  /* compliance | geometry | documentation  (shared/constants/enums.ts) */
+  --group-compliance: var(--ds-purple-700);
+  --group-geometry: var(--ds-teal-700);
+  --group-documentation: var(--ds-pink-700);
+
+  /* --- Confidence: không cạnh tranh màu với verdict ----------------------- */
+  --confidence-high: var(--ds-gray-700); /* trung tính, không gây nhiễu */
+  --confidence-low: var(--ds-amber-700); /* dưới ngưỡng → cần người xác nhận */
+
+  /* Canvas xem bản vẽ — LUÔN nền sáng ở cả 2 theme (bản vẽ là giấy trắng) */
+  --canvas-paper: hsl(0, 0%, 100%);
+  --canvas-backdrop: var(--ds-gray-300);
+  --canvas-annotation-fail: var(--ds-red-700);
+  --canvas-annotation-warn: var(--ds-amber-700);
+  --canvas-annotation-pass: var(--ds-green-700);
+
+  /* Layout */
+  --header-height: 64px;
+  --sidebar-width: 256px; /* = w-64, khớp pl-64 đang dùng ở app/[slug]/layout.tsx */
+  --sidebar-width-collapsed: 56px;
+  --inspector-width: 360px; /* panel checklist bên phải */
+  --page-width: 1400px;
+  --page-margin: 24px;
+
+  /* Motion — tên có tiền tố motion- để không đụng namespace --ease-* của Tailwind */
+  --motion-ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-ease-swift: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --duration-fast: 0.15s; /* hover màu/viền */
+  --duration-popover: 0.2s; /* dropdown, tooltip */
+  --duration-overlay: 0.3s; /* modal, drawer */
+
+  /* Z-index */
+  --z-drawer: 200;
+  --z-modal: 300;
+  --z-menu: 2001;
+  --z-toast: 5000;
+  --z-tooltip: 99999;
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. TAILWIND v4 — @theme inline để utility đọc var() (đổi theme runtime)
+ * -------------------------------------------------------------------------*/
+@theme inline {
+  /* Font */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo,
+    Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Semantic colors → bg-surface-raised, text-muted, border-default... */
+  --color-surface-page: var(--surface-page);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-active: var(--surface-active);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-on-accent: var(--text-on-accent);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-default: var(--border-default);
+  --color-border-strong: var(--border-strong);
+  --color-border-focus: var(--border-focus);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-text: var(--accent-text);
+
+  --color-pass: var(--verdict-pass);
+  --color-pass-subtle: var(--verdict-pass-subtle);
+  --color-pass-text: var(--verdict-pass-text);
+  --color-fail: var(--verdict-fail);
+  --color-fail-subtle: var(--verdict-fail-subtle);
+  --color-fail-text: var(--verdict-fail-text);
+  --color-warn: var(--verdict-warn);
+  --color-warn-subtle: var(--verdict-warn-subtle);
+  --color-warn-text: var(--verdict-warn-text);
+  --color-na: var(--verdict-na);
+  --color-na-subtle: var(--verdict-na-subtle);
+  --color-na-text: var(--verdict-na-text);
+
+  --color-open: var(--finding-open);
+  --color-open-subtle: var(--finding-open-subtle);
+  --color-open-text: var(--finding-open-text);
+  --color-resolved: var(--finding-resolved);
+  --color-resolved-subtle: var(--finding-resolved-subtle);
+  --color-resolved-text: var(--finding-resolved-text);
+  --color-dismissed: var(--finding-dismissed);
+  --color-dismissed-subtle: var(--finding-dismissed-subtle);
+  --color-dismissed-text: var(--finding-dismissed-text);
+
+  --color-review-draft: var(--review-draft);
+  --color-review-processing: var(--review-processing);
+  --color-review-completed: var(--review-completed);
+  --color-review-failed: var(--review-failed);
+
+  --color-group-compliance: var(--group-compliance);
+  --color-group-geometry: var(--group-geometry);
+  --color-group-documentation: var(--group-documentation);
+
+  --color-confidence-high: var(--confidence-high);
+  --color-confidence-low: var(--confidence-low);
+
+  --color-canvas-paper: var(--canvas-paper);
+  --color-canvas-backdrop: var(--canvas-backdrop);
+
+  /* Primitive escape hatch → bg-ds-gray-100 (chỉ dùng khi semantic không đủ) */
+  --color-ds-background-100: var(--ds-background-100);
+  --color-ds-background-200: var(--ds-background-200);
+  --color-ds-gray-100: var(--ds-gray-100);
+  --color-ds-gray-200: var(--ds-gray-200);
+  --color-ds-gray-300: var(--ds-gray-300);
+  --color-ds-gray-400: var(--ds-gray-400);
+  --color-ds-gray-500: var(--ds-gray-500);
+  --color-ds-gray-600: var(--ds-gray-600);
+  --color-ds-gray-700: var(--ds-gray-700);
+  --color-ds-gray-800: var(--ds-gray-800);
+  --color-ds-gray-900: var(--ds-gray-900);
+  --color-ds-gray-1000: var(--ds-gray-1000);
+  --color-ds-blue-100: var(--ds-blue-100);
+  --color-ds-blue-300: var(--ds-blue-300);
+  --color-ds-blue-500: var(--ds-blue-500);
+  --color-ds-blue-700: var(--ds-blue-700);
+  --color-ds-blue-900: var(--ds-blue-900);
+  --color-ds-red-100: var(--ds-red-100);
+  --color-ds-red-300: var(--ds-red-300);
+  --color-ds-red-700: var(--ds-red-700);
+  --color-ds-red-900: var(--ds-red-900);
+  --color-ds-amber-100: var(--ds-amber-100);
+  --color-ds-amber-300: var(--ds-amber-300);
+  --color-ds-amber-700: var(--ds-amber-700);
+  --color-ds-amber-900: var(--ds-amber-900);
+  --color-ds-green-100: var(--ds-green-100);
+  --color-ds-green-300: var(--ds-green-300);
+  --color-ds-green-700: var(--ds-green-700);
+  --color-ds-green-900: var(--ds-green-900);
+  --color-ds-teal-700: var(--ds-teal-700);
+  --color-ds-purple-700: var(--ds-purple-700);
+  --color-ds-pink-700: var(--ds-pink-700);
+
+  /* Radius → rounded-md ... (không đổi theo theme nên ghi giá trị thẳng) */
+  --radius-sm: 4px;
+  --radius-md: 6px; /* mặc định: button, input, card nhỏ */
+  --radius-lg: 8px;
+  --radius-xl: 12px;
+
+  /* Shadow → shadow-ds-small ... */
+  --shadow-ds-border: var(--ds-shadow-border-base);
+  --shadow-ds-small: var(--ds-shadow-border-base), var(--ds-shadow-small);
+  --shadow-ds-medium: var(--ds-shadow-border-base), var(--ds-shadow-medium);
+  --shadow-ds-large: var(--ds-shadow-border-base), var(--ds-shadow-large);
+  --shadow-ds-menu: var(--ds-shadow-menu);
+  --shadow-ds-modal: var(--ds-shadow-modal);
+
+  /* Layout → h-header, w-sidebar, max-w-page */
+  --spacing-header: var(--header-height);
+  --spacing-sidebar: var(--sidebar-width);
+  --spacing-sidebar-collapsed: var(--sidebar-width-collapsed);
+  --spacing-inspector: var(--inspector-width);
+  --container-page: var(--page-width);
+
+  /* Motion → ease-standard, ease-swift */
+  --ease-standard: var(--motion-ease-standard);
+  --ease-swift: var(--motion-ease-swift);
+}
+
+/* ---------------------------------------------------------------------------
+ * 4. BASE
+ * -------------------------------------------------------------------------*/
+@layer base {
+  * {
+    border-color: var(--border-default);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background: var(--surface-page);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    font-size: 0.875rem; /* 14px — cỡ chữ nền của app dashboard */
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Heading: weight 500/600, tracking-tight — không dùng 700+ */
+  h1, h2, h3, h4 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    color: var(--text-primary);
+  }
+
+  /* Số liệu, mã hiệu bản vẽ, tọa độ → mono + tabular */
+  .numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--border-focus);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: var(--accent-subtle);
+    color: var(--accent-text);
+  }
+}

@@ -1,0 +1,1 @@
+export function ReviewProcessingContainer({ reviewId }: { reviewId: string }) { return <section><h1 className="text-2xl font-semibold">Processing review</h1><p className="text-sm text-zinc-500">ID: {reviewId}</p></section>; }

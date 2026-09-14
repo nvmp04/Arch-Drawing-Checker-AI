@@ -1,0 +1,1 @@
+export function ReviewDetailContainer({ reviewId }: { reviewId: string }) { return <section><h1 className="text-2xl font-semibold">Review</h1><p className="text-sm text-zinc-500">ID: {reviewId}</p></section>; }
