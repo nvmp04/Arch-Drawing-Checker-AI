@@ -23,6 +23,10 @@ const RENDER_SCALE = 1.5;
 const DETAIL_DEBOUNCE_MS = 140;
 /** Chặn dpr để canvas chi tiết không phình quá lớn trên màn hình 3x/4x. */
 const MAX_DPR = 2;
+/** Lớp chi tiết vẽ rộng hơn khung xem mỗi phía chừng này (tỉ lệ) để kéo nhẹ không lộ mép lớp nền mờ. */
+const DETAIL_OVERSCAN = 0.15;
+/** Thời lượng hiệu ứng trượt khi zoom/nhảy tới vùng do code điều khiển (không phải do người dùng kéo). */
+const ANIMATION_MS = 300;
 /** Chặn an toàn để tránh NaN/Infinity khi box hoặc trang có kích thước bất thường. */
 const SAFE_MIN_SCALE = 0.01;
 const SAFE_MAX_SCALE = 60;
@@ -158,7 +162,12 @@ export function DrawingPageViewer({
     }>;
   } | null>(null);
   const renderTaskRef = useRef<{ cancel: () => void } | null>(null);
-  const detailCanvasRef = useRef<HTMLCanvasElement>(null);
+  // Hai canvas chi tiết dùng luân phiên (double buffer): vẽ vào cái đang ẩn,
+  // xong mới đổi cái hiện — để nội dung mới và transform của nó đổi cùng một lần
+  // commit, không bao giờ có khung hình nội dung mới nằm sai vị trí (tàn ảnh).
+  const detailCanvasARef = useRef<HTMLCanvasElement>(null);
+  const detailCanvasBRef = useRef<HTMLCanvasElement>(null);
+  const activeDetailSlotRef = useRef<0 | 1>(1);
   const detailTaskRef = useRef<{ cancel: () => void } | null>(null);
   const detailRequestRef = useRef(0);
 
@@ -168,7 +177,10 @@ export function DrawingPageViewer({
   const [transform, setTransform] = useState<Transform>({ scale: 1, x: 0, y: 0 });
   const [fitScale, setFitScale] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
-  const [isWheeling, setIsWheeling] = useState(false);
+  /** Chỉ bật transition khi code tự di chuyển khung nhìn; thao tác của người dùng luôn tức thì. */
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animationTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const hasFittedRef = useRef(false);
   const [viewportSize, setViewportSize] = useState<{ width: number; height: number } | null>(null);
   /** Lớp chi tiết đã vẽ xong: render ở transform (x, y, scale) cho trang `page`. */
   const [detail, setDetail] = useState<{
@@ -177,10 +189,28 @@ export function DrawingPageViewer({
     y: number;
     scale: number;
     dpr: number;
+    /** Kích thước phần nhìn thấy (css px), chưa tính lề overscan. */
     cssWidth: number;
     cssHeight: number;
+    marginX: number;
+    marginY: number;
+    slot: 0 | 1;
   } | null>(null);
   const dragRef = useRef<{ startX: number; startY: number; originX: number; originY: number } | null>(null);
+
+  const startAnimation = useCallback(() => {
+    setIsAnimating(true);
+    clearTimeout(animationTimerRef.current);
+    animationTimerRef.current = setTimeout(() => setIsAnimating(false), ANIMATION_MS + 40);
+  }, []);
+
+  /** Người dùng chạm vào: dừng hiệu ứng đang chạy và bỏ dở việc render lớp chi tiết. */
+  const beginUserInteraction = useCallback(() => {
+    clearTimeout(animationTimerRef.current);
+    setIsAnimating(false);
+    detailRequestRef.current += 1;
+    detailTaskRef.current?.cancel();
+  }, []);
 
   // Nạp file PDF một lần theo pdfUrl.
   useEffect(() => {
@@ -254,6 +284,10 @@ export function DrawingPageViewer({
     const fit = computeFitTransform(rect.width, rect.height, naturalSize.width, naturalSize.height);
     setFitScale(fit.scale);
 
+    // Lần fit đầu tiên hiện tức thì; các lần sau (nhảy trang, zoom vào vùng) mới trượt.
+    if (hasFittedRef.current) startAnimation();
+    hasFittedRef.current = true;
+
     setTransform(
       focusBoundingBox
         ? computeFocusTransform(rect.width, rect.height, naturalSize.width, naturalSize.height, focusBoundingBox)
@@ -280,13 +314,14 @@ export function DrawingPageViewer({
   // mức zoom hiện tại, chỉ trong phạm vi khung xem, rồi phủ lên lớp nền. Nhờ đó
   // nét vector luôn sắc ở mọi mức phóng đại thay vì kéo giãn ảnh bitmap có sẵn.
   useEffect(() => {
-    if (isLoading || loadError || !viewportSize) return;
+    if (isLoading || loadError || !viewportSize || isDragging) return;
     if (!naturalSize || naturalSize.page !== pageNumber) return;
     const { x, y, scale } = transform;
 
     const timer = setTimeout(async () => {
       const doc = pdfDocRef.current;
-      const target = detailCanvasRef.current;
+      const slot: 0 | 1 = activeDetailSlotRef.current === 0 ? 1 : 0;
+      const target = (slot === 0 ? detailCanvasARef : detailCanvasBRef).current;
       if (!doc || !target) return;
 
       const requestId = ++detailRequestRef.current;
@@ -295,6 +330,8 @@ export function DrawingPageViewer({
       const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
       const cssWidth = Math.round(viewportSize.width);
       const cssHeight = Math.round(viewportSize.height);
+      const marginX = Math.round(cssWidth * DETAIL_OVERSCAN);
+      const marginY = Math.round(cssHeight * DETAIL_OVERSCAN);
       // Số px màn hình (css) trên mỗi đơn vị điểm của PDF ở mức zoom hiện tại.
       const pixelsPerPoint = RENDER_SCALE * scale;
 
@@ -302,24 +339,29 @@ export function DrawingPageViewer({
         const page = await doc.getPage(pageNumber);
         if (requestId !== detailRequestRef.current) return;
 
-        const offscreen = document.createElement("canvas");
-        offscreen.width = Math.round(cssWidth * dpr);
-        offscreen.height = Math.round(cssHeight * dpr);
-        const ctx = offscreen.getContext("2d");
+        // Đặt lại kích thước cũng xóa canvas — an toàn vì canvas này đang ẩn.
+        target.width = Math.round((cssWidth + marginX * 2) * dpr);
+        target.height = Math.round((cssHeight + marginY * 2) * dpr);
+        const ctx = target.getContext("2d");
         if (!ctx) return;
 
         // Tô giấy trắng đúng vùng trang để lớp này che kín lớp nền mờ bên dưới,
         // không để nét mờ của lớp nền lộ ra quanh nét sắc.
         ctx.fillStyle =
           getComputedStyle(document.documentElement).getPropertyValue("--canvas-paper").trim() || "white";
-        ctx.fillRect(dpr * x, dpr * y, dpr * naturalSize.width * scale, dpr * naturalSize.height * scale);
+        ctx.fillRect(
+          dpr * (x + marginX),
+          dpr * (y + marginY),
+          dpr * naturalSize.width * scale,
+          dpr * naturalSize.height * scale,
+        );
 
         const task = page.render({
           canvasContext: ctx,
           viewport: page.getViewport({
             scale: dpr * pixelsPerPoint,
-            offsetX: dpr * x,
-            offsetY: dpr * y,
+            offsetX: dpr * (x + marginX),
+            offsetY: dpr * (y + marginY),
           }),
           background: "rgba(0,0,0,0)",
         });
@@ -327,17 +369,15 @@ export function DrawingPageViewer({
         await task.promise;
         if (requestId !== detailRequestRef.current) return;
 
-        target.width = offscreen.width;
-        target.height = offscreen.height;
-        target.getContext("2d")?.drawImage(offscreen, 0, 0);
-        setDetail({ page: pageNumber, x, y, scale, dpr, cssWidth, cssHeight });
+        activeDetailSlotRef.current = slot;
+        setDetail({ page: pageNumber, x, y, scale, dpr, cssWidth, cssHeight, marginX, marginY, slot });
       } catch {
-        // Render bị hủy hoặc lỗi — giữ nguyên lớp nền, lần thao tác sau sẽ thử lại.
+        // Render bị hủy hoặc lỗi — giữ nguyên lớp đang hiện, lần thao tác sau sẽ thử lại.
       }
     }, DETAIL_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [isLoading, loadError, viewportSize, naturalSize, pageNumber, transform]);
+  }, [isLoading, loadError, viewportSize, naturalSize, pageNumber, transform, isDragging]);
 
   useEffect(
     () => () => {
@@ -355,15 +395,9 @@ export function DrawingPageViewer({
     const el = viewportRef.current;
     if (!el) return;
 
-    let settleTimer: ReturnType<typeof setTimeout> | undefined;
-
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-
-      // Bỏ transition khi đang lướt để chuyển động bám sát ngón tay.
-      setIsWheeling(true);
-      clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => setIsWheeling(false), 150);
+      beginUserInteraction();
 
       const lineToPx = event.deltaMode === 1 ? 16 : 1;
       const deltaX = event.deltaX * lineToPx;
@@ -393,11 +427,8 @@ export function DrawingPageViewer({
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      clearTimeout(settleTimer);
-      el.removeEventListener("wheel", handleWheel);
-    };
-  }, [fitScale]);
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [fitScale, beginUserInteraction]);
 
   const zoomBy = (factor: number) => {
     const el = viewportRef.current;
@@ -405,6 +436,7 @@ export function DrawingPageViewer({
     const rect = el.getBoundingClientRect();
     const cx = rect.width / 2;
     const cy = rect.height / 2;
+    startAnimation();
     setTransform((prev) => {
       const nextScale = clamp(
         prev.scale * factor,
@@ -420,10 +452,12 @@ export function DrawingPageViewer({
     const el = viewportRef.current;
     if (!naturalSize || !el) return;
     const rect = el.getBoundingClientRect();
+    startAnimation();
     setTransform(computeFitTransform(rect.width, rect.height, naturalSize.width, naturalSize.height));
   };
 
   const onPointerDown = (event: React.PointerEvent) => {
+    beginUserInteraction();
     (event.target as Element).setPointerCapture(event.pointerId);
     dragRef.current = {
       startX: event.clientX,
@@ -453,7 +487,7 @@ export function DrawingPageViewer({
     width: naturalSize?.width,
     height: naturalSize?.height,
   };
-  const layerMotion = isDragging || isWheeling ? "" : "transition-transform duration-300 ease-out";
+  const layerMotion = isAnimating ? "transition-transform duration-300 ease-out" : "";
 
   // Lớp chi tiết đứng ở transform lúc render (`detail`); khi người dùng vừa
   // zoom/kéo thì nó được dịch/co giãn theo phần chênh lệch, và chỉ hiện khi vẫn
@@ -462,6 +496,7 @@ export function DrawingPageViewer({
   const showDetail =
     !!detail &&
     detail.page === pageNumber &&
+    !isAnimating &&
     ((detailRatio >= 0.7 && detailRatio <= 1.4) || detail.dpr / detailRatio >= 1 / transform.scale);
 
   const zoomPercent =Math.round((transform.scale / fitScale) * 100);
@@ -557,25 +592,32 @@ export function DrawingPageViewer({
         )}
 
         {/* Lớp nền: cả trang ở độ phân giải thấp, hiện ngay khi đang zoom/kéo. */}
-        <div style={contentStyle} className={`absolute left-0 top-0 ${layerMotion}`}>
+        <div style={contentStyle} className={`absolute left-0 top-0 will-change-transform ${layerMotion}`}>
           <canvas ref={canvasRef} className="block bg-canvas-paper" />
         </div>
 
-        {/* Lớp chi tiết: render lại đúng mức zoom hiện tại nên nét luôn sắc. */}
-        <canvas
-          ref={detailCanvasRef}
-          aria-hidden
-          className={`pointer-events-none absolute left-0 top-0 ${layerMotion}`}
-          style={{
-            width: detail?.cssWidth,
-            height: detail?.cssHeight,
-            transformOrigin: "0 0",
-            transform: detail
-              ? `translate(${transform.x - detail.x * detailRatio}px, ${transform.y - detail.y * detailRatio}px) scale(${detailRatio})`
-              : undefined,
-            visibility: showDetail ? "visible" : "hidden",
-          }}
-        />
+        {/* Lớp chi tiết (2 canvas luân phiên): render lại đúng mức zoom nên nét luôn sắc. */}
+        {([0, 1] as const).map((slot) => {
+          const isActive = detail?.slot === slot;
+          return (
+            <canvas
+              key={slot}
+              ref={slot === 0 ? detailCanvasARef : detailCanvasBRef}
+              aria-hidden
+              className="pointer-events-none absolute left-0 top-0 will-change-transform"
+              style={{
+                width: isActive && detail ? detail.cssWidth + detail.marginX * 2 : undefined,
+                height: isActive && detail ? detail.cssHeight + detail.marginY * 2 : undefined,
+                transformOrigin: "0 0",
+                transform:
+                  isActive && detail
+                    ? `translate(${transform.x - (detail.x + detail.marginX) * detailRatio}px, ${transform.y - (detail.y + detail.marginY) * detailRatio}px) scale(${detailRatio})`
+                    : undefined,
+                visibility: isActive && showDetail ? "visible" : "hidden",
+              }}
+            />
+          );
+        })}
 
         {/* Lớp vùng khoanh: cùng transform với lớp nền, nằm trên cùng để bấm được. */}
         <div style={contentStyle} className={`absolute left-0 top-0 ${layerMotion}`}>
@@ -586,7 +628,7 @@ export function DrawingPageViewer({
             // Khối nằm trong vùng bị scale, nên viền và nhãn phải chia ngược cho
             // scale để luôn giữ kích thước cố định trên màn hình.
             const inverse = 1 / transform.scale;
-            const motion = isDragging || isWheeling ? "" : "transition-[transform,border-width] duration-300 ease-out";
+            const motion = isAnimating ? "transition-[transform,border-width] duration-300 ease-out" : "";
 
             return (
               <button

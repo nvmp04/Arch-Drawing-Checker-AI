@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { Finding } from "@/features/findings/types/finding.types";
 import { EmptyState } from "@/shared/components/EmptyState";
@@ -34,6 +34,18 @@ function passRateTone(percent: number): string {
   return "text-pass-text";
 }
 
+function belongsToTab(finding: Finding, tab: ResultTab): boolean {
+  if (tab === "all") return true;
+  return (tab === "action" ? ACTION_REQUIRED_STATUSES : PASSED_STATUSES).includes(finding.status);
+}
+
+/** Tab tự nhiên của một finding — dùng khi phải chuyển tab để nó hiện ra. */
+function tabOf(finding: Finding): ResultTab {
+  if (ACTION_REQUIRED_STATUSES.includes(finding.status)) return "action";
+  if (PASSED_STATUSES.includes(finding.status)) return "passed";
+  return "all";
+}
+
 function sortFindings(findings: readonly Finding[]): readonly Finding[] {
   return [...findings].sort((a, b) => {
     const byStatus = STATUS_ORDER.indexOf(a.status) - STATUS_ORDER.indexOf(b.status);
@@ -63,6 +75,25 @@ export function FindingResultPanel({
   onSaveNote: (id: string, note: string) => void;
 }) {
   const [tab, setTab] = useState<ResultTab>("action");
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Chọn một finding từ nơi khác (bấm vào vùng khoanh trên bản vẽ): nếu thẻ
+  // không nằm trong tab đang mở thì chuyển sang tab chứa nó. Điều chỉnh state
+  // ngay lúc render (theo id đã đồng bộ) thay vì trong effect.
+  const [syncedSelectedId, setSyncedSelectedId] = useState<string | undefined>(undefined);
+  if (selectedFindingId !== syncedSelectedId) {
+    setSyncedSelectedId(selectedFindingId);
+    const target = findings.find((f) => f.id === selectedFindingId);
+    if (target && !belongsToTab(target, tab)) setTab(tabOf(target));
+  }
+
+  // Cuộn tới thẻ của finding đang chọn.
+  useEffect(() => {
+    if (!selectedFindingId) return;
+    listRef.current
+      ?.querySelector(`[data-finding-id="${selectedFindingId}"]`)
+      ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selectedFindingId, tab]);
 
   const statusCounts = useMemo(() => {
     const counts = { ...EMPTY_STATUS_COUNTS } as Record<FindingStatus, number>;
@@ -126,7 +157,7 @@ export function FindingResultPanel({
         </div>
       </div>
 
-      <div className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden p-3">
+      <div ref={listRef} className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden p-3">
         {visible.length === 0 ? (
           <div className="px-2 py-10 text-center">
             <EmptyState message="Không có tiêu chí nào trong mục này." />

@@ -108,6 +108,7 @@ export function FindingResultCard({
   return (
     <div
       data-selected={isSelected}
+      data-finding-id={finding.id}
       className="rounded-lg border border-border-subtle p-3 transition-colors duration-150
                  data-[selected=true]:border-accent data-[selected=true]:bg-accent-subtle"
     >
