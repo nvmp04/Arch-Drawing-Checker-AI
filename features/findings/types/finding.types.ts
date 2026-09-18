@@ -15,6 +15,18 @@ export type ReviewDossier = {
   name: string;
 };
 
+/**
+ * Vùng khoanh của một finding trên trang bản vẽ, tính theo phần trăm (0–100)
+ * kích thước trang — không phụ thuộc độ phân giải render, nên luôn khớp dù
+ * phóng to/thu nhỏ hay đổi kích thước khung xem.
+ */
+export type BoundingBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type Finding = {
   id: string;
   /** Hồ sơ thẩm định chứa tiêu chí này. */
@@ -35,4 +47,8 @@ export type Finding = {
   category: ChtkCategory;
   /** Số thứ tự trang trong file PDF bản vẽ. */
   pageNumber: number;
+  /** Vùng khoanh trên trang — mock ngẫu nhiên ở giai đoạn chưa có backend. */
+  boundingBox: BoundingBox;
+  /** Ghi chú của chuyên gia thẩm định — chưa có thì để trống, không phải lỗi. */
+  note?: string;
 };

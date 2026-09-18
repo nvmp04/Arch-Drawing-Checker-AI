@@ -1,2 +1,11 @@
 import { ReviewProcessingContainer } from "@/features/reviews/containers/ReviewProcessingContainer";
-export default async function ProcessingPage({ params }: { params: Promise<{ reviewId: string }> }) { const { reviewId } = await params; return <ReviewProcessingContainer reviewId={reviewId} />; }
+
+type ProcessingPageProps = {
+  params: Promise<{ slug: string; reviewId: string }>;
+};
+
+export default async function ProcessingPage({ params }: ProcessingPageProps) {
+  const { slug, reviewId } = await params;
+
+  return <ReviewProcessingContainer reviewId={reviewId} workspaceSlug={slug} />;
+}

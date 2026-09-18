@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Asset công khai, không phải code của repo — pdf.worker.min.mjs là bản
+    // build đã minify copy từ pdfjs-dist (xem scripts/copy-pdf-worker.mjs).
+    "public/**",
   ]),
 ]);
 

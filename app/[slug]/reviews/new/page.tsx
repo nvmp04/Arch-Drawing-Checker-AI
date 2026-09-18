@@ -1,2 +1,9 @@
 import { NewReviewContainer } from "@/features/reviews/containers/NewReviewContainer";
-export default function NewReviewPage() { return <NewReviewContainer />; }
+
+type NewReviewPageProps = { params: Promise<{ slug: string }> };
+
+export default async function NewReviewPage({ params }: NewReviewPageProps) {
+  const { slug } = await params;
+
+  return <NewReviewContainer workspaceSlug={slug} />;
+}

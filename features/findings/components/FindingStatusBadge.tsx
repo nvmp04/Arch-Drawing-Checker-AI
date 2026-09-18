@@ -1,9 +1,6 @@
 import { TipText, TipTitle, Tooltip } from "@/shared/components/Tooltip";
 import type { FindingStatus } from "@/shared/constants/enums";
-import {
-  STATUS_CONFIG,
-  STATUS_DESCRIPTION,
-} from "../constants/finding.constants";
+import { STATUS_CONFIG } from "../constants/finding.constants";
 
 export function FindingStatusBadge({
   status,
@@ -12,7 +9,7 @@ export function FindingStatusBadge({
   status: FindingStatus;
   align?: "left" | "right";
 }) {
-  const { label, Icon, badge } = STATUS_CONFIG[status];
+  const { label, Icon, badge, description } = STATUS_CONFIG[status];
 
   return (
     <Tooltip
@@ -20,7 +17,7 @@ export function FindingStatusBadge({
       content={
         <>
           <TipTitle>Trạng thái — {label}</TipTitle>
-          <TipText>{STATUS_DESCRIPTION[status]}</TipText>
+          <TipText>{description}</TipText>
         </>
       }
     >

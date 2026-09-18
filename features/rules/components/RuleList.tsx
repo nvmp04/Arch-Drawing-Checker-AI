@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/shared/components/EmptyState";
+import { TipText, Tooltip } from "@/shared/components/Tooltip";
+import { PlusIcon, UploadIcon } from "@/shared/components/icons";
 import { CATEGORY_CONFIG, CATEGORY_ORDER } from "@/shared/constants/domain";
 import type { Rule, RuleFilterState } from "../types/rule.types";
 import { EMPTY_RULE_FILTER } from "../types/rule.types";
+import { AddRuleModal } from "./AddRuleModal";
 import { RuleFilterBar } from "./RuleFilterBar";
 import { RuleRow } from "./RuleRow";
 import type { RuleAction } from "./RuleActionMenu";
@@ -33,10 +36,13 @@ function matches(rule: Rule, filters: RuleFilterState): boolean {
   return true;
 }
 
-export function RuleList({ rules }: { rules: readonly Rule[] }) {
+export function RuleList({ rules: initialRules }: { rules: readonly Rule[] }) {
+  /** Danh sách tiêu chí — cục bộ để tiêu chí thêm mới xuất hiện ngay, chưa nối API. */
+  const [rules, setRules] = useState<readonly Rule[]>(initialRules);
   const [filters, setFilters] = useState<RuleFilterState>(EMPTY_RULE_FILTER);
   /** Bật/tắt quy tắc — state cục bộ, chưa nối API. */
   const [overrides, setOverrides] = useState<Readonly<Record<string, boolean>>>({});
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const visible = useMemo(
     () => rules.filter((rule) => matches(rule, filters)),
@@ -59,6 +65,36 @@ export function RuleList({ rules }: { rules: readonly Rule[] }) {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end gap-2">
+        <Tooltip
+          align="right"
+          content={<TipText>Nhập tiêu chí hàng loạt từ Excel sẽ có trong giai đoạn sau.</TipText>}
+        >
+          <button
+            type="button"
+            disabled
+            aria-disabled
+            className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-text-muted
+                       shadow-ds-border transition-colors duration-150
+                       disabled:cursor-not-allowed disabled:opacity-55"
+          >
+            <UploadIcon className="size-4" />
+            Nhập Excel
+          </button>
+        </Tooltip>
+
+        <button
+          type="button"
+          onClick={() => setIsAddModalOpen(true)}
+          className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent
+                     transition-colors duration-150 hover:bg-accent-hover
+                     focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
+        >
+          <PlusIcon className="size-4" />
+          Thêm tiêu chí mới
+        </button>
+      </div>
+
       <RuleFilterBar
         filters={filters}
         onChange={setFilters}
@@ -112,6 +148,16 @@ export function RuleList({ rules }: { rules: readonly Rule[] }) {
             </section>
           ))}
         </div>
+      )}
+
+      {isAddModalOpen && (
+        <AddRuleModal
+          onClose={() => setIsAddModalOpen(false)}
+          onCreate={(rule) => {
+            setRules((prev) => [rule, ...prev]);
+            setIsAddModalOpen(false);
+          }}
+        />
       )}
     </div>
   );

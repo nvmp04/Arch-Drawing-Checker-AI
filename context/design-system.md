@@ -41,10 +41,12 @@ Tất cả bám theo enum thật trong `shared/constants/enums.ts`. Thêm enum m
 | `fail` | Không đạt | `--status-fail` | red-700 |
 | `warning` | Cảnh báo | `--status-warning` | amber-700 |
 | `pending` | Chờ người thẩm định | `--status-pending` | blue-700 |
-| `approved` | Đã duyệt | `--status-approved` | teal-700 |
+| `approved` | Đã duyệt | `--status-approved` | purple-700 |
 | `unknown` | Không xác định | `--status-unknown` | gray-700 |
 
 Mỗi status có bộ 3: `--status-X` (fill đặc, chấm, viền trái dòng), `--status-X-subtle` (nền badge), `--status-X-text` (chữ trên nền subtle). Tailwind: `bg-fail-subtle text-fail-text`, `bg-pass`, `border-l-warning`, ...
+
+> Approved dùng **tím** chứ không phải teal: teal cạnh green của "Đạt" chỉ cách ΔE 8.3 ở mắt thường, không tách được khi hai đoạn nằm cạnh nhau trên thanh stacked. Xem `decisions.md` D-14.
 
 > `warning` là status hạng nhất, không phải biến thể phụ của `fail`. Kết quả dưới ngưỡng tin cậy là `warning` hoặc `pending`, không được ép thành `fail`. `approved` nghĩa là người đã xác nhận kết luận của máy — khác với `pass` là máy tự kết luận đạt.
 

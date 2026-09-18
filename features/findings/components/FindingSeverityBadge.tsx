@@ -1,23 +1,20 @@
 import { TipText, TipTitle, Tooltip } from "@/shared/components/Tooltip";
 import type { FindingSeverity } from "@/shared/constants/enums";
-import {
-  SEVERITY_CONFIG,
-  SEVERITY_DESCRIPTION,
-} from "../constants/finding.constants";
+import { SEVERITY_CONFIG } from "../constants/finding.constants";
 
 /**
  * Mức độ dùng thang cường độ một sắc (xám → hổ phách → đỏ → đỏ đậm),
  * kèm thanh dọc để đọc được cả khi không phân biệt màu.
  */
 export function FindingSeverityBadge({ severity }: { severity: FindingSeverity }) {
-  const { label, badge, bar } = SEVERITY_CONFIG[severity];
+  const { label, badge, bar, description } = SEVERITY_CONFIG[severity];
 
   return (
     <Tooltip
       content={
         <>
           <TipTitle>Mức độ — {label}</TipTitle>
-          <TipText>{SEVERITY_DESCRIPTION[severity]}</TipText>
+          <TipText>{description}</TipText>
           <TipText>Thang tăng dần: Thấp · Trung bình · Cao · Nghiêm trọng.</TipText>
         </>
       }

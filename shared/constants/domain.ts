@@ -1,9 +1,21 @@
+import {
+  AlertTriangleIcon,
+  CheckIcon,
+  ClockIcon,
+  QuestionIcon,
+  ShieldCheckIcon,
+  XIcon,
+} from "@/shared/components/icons";
 import type {
   CheckType,
   ChtkCategory,
   ComparisonOperator,
+  FindingSeverity,
+  FindingStatus,
   HouseType,
 } from "./enums";
+
+type IconComponent = (props: { className?: string }) => React.ReactElement;
 
 /* -------------------------------------------------------------------------- */
 /* Nhóm CHTK                                                                   */
@@ -190,3 +202,138 @@ export const OPERATOR_ORDER: readonly ComparisonOperator[] = [
   "required",
   "forbidden",
 ];
+
+/* -------------------------------------------------------------------------- */
+/* Trạng thái tiêu chí                                                         */
+/* -------------------------------------------------------------------------- */
+
+export const STATUS_CONFIG: Record<
+  FindingStatus,
+  {
+    label: string;
+    Icon: IconComponent;
+    badge: string;
+    bar: string;
+    border: string;
+    description: string;
+  }
+> = {
+  pass: {
+    label: "Đạt",
+    Icon: CheckIcon,
+    badge: "bg-pass-subtle text-pass-text",
+    bar: "bg-pass",
+    border: "border-l-pass",
+    description:
+      "Máy đối chiếu thấy giá trị trên bản vẽ nằm trong tiêu chuẩn áp dụng.",
+  },
+  fail: {
+    label: "Không đạt",
+    Icon: XIcon,
+    badge: "bg-fail-subtle text-fail-text",
+    bar: "bg-fail",
+    border: "border-l-fail",
+    description:
+      "Giá trị trên bản vẽ lệch khỏi tiêu chuẩn áp dụng. Cần chỉnh bản vẽ.",
+  },
+  warning: {
+    label: "Cảnh báo",
+    Icon: AlertTriangleIcon,
+    badge: "bg-warning-subtle text-warning-text",
+    bar: "bg-warning",
+    border: "border-l-warning",
+    description:
+      "Có dấu hiệu lệch nhưng chưa đủ chắc chắn — thường do độ tin cậy trích xuất thấp hoặc ghi chú mơ hồ.",
+  },
+  pending: {
+    label: "Chờ người thẩm định",
+    Icon: ClockIcon,
+    badge: "bg-pending-subtle text-pending-text",
+    bar: "bg-pending",
+    border: "border-l-pending",
+    description: "Đã có kết luận sơ bộ, đang chờ người thẩm định xác nhận.",
+  },
+  approved: {
+    label: "Đã duyệt",
+    Icon: ShieldCheckIcon,
+    badge: "bg-approved-subtle text-approved-text",
+    bar: "bg-approved",
+    border: "border-l-approved",
+    description: "Người thẩm định đã xem và xác nhận kết luận của máy.",
+  },
+  unknown: {
+    label: "Không xác định",
+    Icon: QuestionIcon,
+    badge: "bg-unknown-subtle text-unknown-text",
+    bar: "bg-unknown",
+    border: "border-l-unknown",
+    description:
+      "Không trích xuất được dữ liệu để đối chiếu — bản vẽ thiếu thông tin hoặc ảnh không đọc được.",
+  },
+};
+
+/** Thứ tự hiển thị: nặng trước, đã xong sau. */
+export const STATUS_ORDER: readonly FindingStatus[] = [
+  "fail",
+  "warning",
+  "pending",
+  "pass",
+  "approved",
+  "unknown",
+];
+
+/** Trạng thái coi là "đã kết luận đạt" khi tính tỷ lệ. */
+export const PASSED_STATUSES: readonly FindingStatus[] = ["pass", "approved"];
+
+/** Trạng thái cần người can thiệp tay. */
+export const ACTION_REQUIRED_STATUSES: readonly FindingStatus[] = [
+  "fail",
+  "warning",
+  "pending",
+];
+
+/* -------------------------------------------------------------------------- */
+/* Mức độ                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export const SEVERITY_CONFIG: Record<
+  FindingSeverity,
+  { label: string; badge: string; bar: string; description: string }
+> = {
+  low: {
+    label: "Thấp",
+    badge: "bg-sev-low-subtle text-sev-low-text",
+    bar: "bg-sev-low",
+    description: "Sai lệch nhỏ, không ảnh hưởng an toàn hay công năng.",
+  },
+  medium: {
+    label: "Trung bình",
+    badge: "bg-sev-medium-subtle text-sev-medium-text",
+    bar: "bg-sev-medium",
+    description:
+      "Ảnh hưởng công năng hoặc thẩm mỹ, cần chỉnh trước khi triển khai.",
+  },
+  high: {
+    label: "Cao",
+    badge: "bg-sev-high-subtle text-sev-high-text",
+    bar: "bg-sev-high",
+    description: "Ảnh hưởng đáng kể tới công năng hoặc chi phí thi công.",
+  },
+  critical: {
+    label: "Nghiêm trọng",
+    badge: "bg-sev-critical-subtle text-sev-critical-text",
+    bar: "bg-sev-critical",
+    description:
+      "Liên quan an toàn hoặc quy chuẩn bắt buộc — phải xử lý trước tiên.",
+  },
+};
+
+export const SEVERITY_ORDER: readonly FindingSeverity[] = [
+  "critical",
+  "high",
+  "medium",
+  "low",
+];
+
+/** Dưới ngưỡng này thì kết luận của máy phải được người xác nhận. */
+export const CONFIDENCE_THRESHOLD = 0.8;

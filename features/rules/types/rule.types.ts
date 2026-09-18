@@ -35,3 +35,11 @@ export const EMPTY_RULE_FILTER: RuleFilterState = {
   houseType: [],
   operator: [],
 };
+
+/**
+ * Dữ liệu nhập khi thêm một tiêu chí mới. Không có `id` (server/service sinh
+ * ra) và không có `category` — nhóm CHTK luôn suy từ `code` bằng
+ * `categoryFromRuleIndex()`, không nhập tay để tránh lệch giữa các nơi suy ra
+ * nhóm khác nhau.
+ */
+export type CreateRuleInput = Omit<Rule, "id" | "category">;
