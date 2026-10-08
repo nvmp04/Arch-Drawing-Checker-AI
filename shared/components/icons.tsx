@@ -214,6 +214,29 @@ export function LoaderIcon(props: IconProps) {
   );
 }
 
+export function FileSpreadsheetIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M8 13h8" />
+      <path d="M8 17h8" />
+      <path d="M12 13v4" />
+    </Svg>
+  );
+}
+
+export function RefreshCwIcon(props: IconProps) {
+  return (
+    <Svg {...props}>
+      <path d="M21 12a9 9 0 0 1-15.4 6.4L3 16" />
+      <path d="M3 12a9 9 0 0 1 15.4-6.4L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M3 21v-5h5" />
+    </Svg>
+  );
+}
+
 export function ArrowRightIcon(props: IconProps) {
   return (
     <Svg {...props}>

@@ -1,10 +1,13 @@
+"use client";
+
+import { EmptyState } from "@/shared/components/EmptyState";
+import { ErrorState, errorDetail } from "@/shared/components/ErrorState";
+import { SkeletonList } from "@/shared/components/Skeleton";
 import { FindingList } from "../components/FindingList";
-import { MOCK_DOSSIERS, MOCK_FINDINGS } from "../mocks/findings.mock";
+import { useFindings } from "../hooks/useFindings";
 
 export function FindingListContainer({ workspaceSlug }: { workspaceSlug: string }) {
-  // MOCK — thay bằng hook gọi API khi có backend.
-  const dossiers = MOCK_DOSSIERS;
-  const findings = MOCK_FINDINGS;
+  const { data, isPending, isError, error, refetch } = useFindings(workspaceSlug);
 
   return (
     <section className="space-y-4">
@@ -18,11 +21,25 @@ export function FindingListContainer({ workspaceSlug }: { workspaceSlug: string 
         </p>
       </header>
 
-      <FindingList
-        dossiers={dossiers}
-        findings={findings}
-        workspaceSlug={workspaceSlug}
-      />
+      {isPending ? (
+        <SkeletonList rows={3} rowClassName="h-12" label="Đang tải kết quả tiêu chí…" />
+      ) : isError ? (
+        <ErrorState
+          message="Không tải được kết quả tiêu chí."
+          detail={errorDetail(error)}
+          onRetry={() => void refetch()}
+        />
+      ) : data.dossiers.length === 0 ? (
+        <div className="rounded-lg bg-surface-raised px-4 py-10 text-center shadow-ds-small">
+          <EmptyState message="Chưa có hồ sơ nào được đối chiếu." />
+        </div>
+      ) : (
+        <FindingList
+          dossiers={data.dossiers}
+          findings={data.findings}
+          workspaceSlug={workspaceSlug}
+        />
+      )}
     </section>
   );
 }

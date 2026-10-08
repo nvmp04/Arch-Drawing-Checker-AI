@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { MoonIcon, SunIcon } from "@/shared/components/icons";
+import { readStorageItem, writeStorageItem } from "@/shared/utils/storage";
 
 const STORAGE_KEY = "adc-theme";
 
@@ -16,7 +17,7 @@ export function ThemeToggle() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
+    const stored = readStorageItem("local", STORAGE_KEY);
     const shouldBeDark = stored ? stored === "dark" : true;
     document.documentElement.classList.toggle("dark", shouldBeDark);
     setIsDark(shouldBeDark);
@@ -26,7 +27,7 @@ export function ThemeToggle() {
   const toggle = () => {
     const next = !isDark;
     document.documentElement.classList.toggle("dark", next);
-    window.localStorage.setItem(STORAGE_KEY, next ? "dark" : "light");
+    writeStorageItem("local", STORAGE_KEY, next ? "dark" : "light");
     setIsDark(next);
   };
 

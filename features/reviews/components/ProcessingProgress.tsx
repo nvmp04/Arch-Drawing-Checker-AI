@@ -25,13 +25,17 @@ export function ProcessingProgress({
 
   useEffect(() => {
     let cancelled = false;
-    reviewsService.getReview(reviewId).then((result) => {
-      if (!cancelled) setReview(result);
-    });
+    reviewsService.getReview(workspaceSlug, reviewId).then(
+      (result) => {
+        if (!cancelled) setReview(result);
+      },
+      // Tiêu đề chỉ là phần phụ của trang này — lỗi thì giữ câu "Đang chuẩn bị".
+      () => undefined,
+    );
     return () => {
       cancelled = true;
     };
-  }, [reviewId]);
+  }, [workspaceSlug, reviewId]);
 
   return (
     <section className="mx-auto max-w-2xl space-y-6">

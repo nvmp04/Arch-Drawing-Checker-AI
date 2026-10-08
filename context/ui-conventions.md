@@ -7,7 +7,8 @@ Quy ước bố cục, cấu trúc và đặt tên — mô tả **repo đang có
 - Next.js **16.3.5** (App Router) · React 19.2.8 · TypeScript strict
 - Tailwind **v4** qua `@tailwindcss/postcss`, **không có** `tailwind.config` — token khai trong `app/globals.css` bằng `@theme inline`
 - Alias `@/*` → thư mục gốc repo. **Không có `src/`**
-- Dependencies: chỉ `next`, `react`, `react-dom`. Xem `decisions.md` D-02 trước khi định cài thêm
+- Lấy dữ liệu: **TanStack Query v5** (`decisions.md` D-22). Provider ở `app/providers.tsx`, cấu hình ở `shared/services/queryClient.ts`
+- Dependencies: `next`, `react`, `react-dom`, `pdfjs-dist`, `pdf-lib`, `@tanstack/react-query`. Xem `decisions.md` D-02 trước khi định cài thêm
 
 > Next 16 có breaking change so với 15. Trước khi dùng API của Next, đọc `node_modules/next/dist/docs/` theo nhắc nhở trong `AGENTS.md`. Đã gặp: `params` là `Promise` phải `await`; root layout dùng type helper `LayoutProps<"/">`.
 
@@ -48,29 +49,45 @@ Zone là cấp lồng có đủ tab riêng. Quy ước: **dùng lại chính con
 
 ```
 app/
-  [slug]/<tab>/page.tsx        chỉ import container, không chứa JSX nghiệp vụ
+  [slug]/<tab>/page.tsx        Server Component: await params, chỉ import container
+  providers.tsx                "use client" — QueryClientProvider + devtools
+  layout.tsx                   bọc children trong <AppProviders>
   globals.css                  nguồn sự thật về token
 features/<feature>/
   components/   presentational; giữ được state UI cục bộ, không gọi API
-  containers/   ghép dữ liệu + components; là thứ page import
-  constants/    config map: nhãn, icon, class theo enum
+  containers/   "use client" — gọi hook của feature, render 4 nhánh; là thứ page import
+  constants/    config map (<feature>.constants.ts) + khóa cache (<feature>.queryKeys.ts)
+  hooks/        useXxx.ts — bọc useQuery/useMutation, KHÔNG lọc/sắp xếp trong này
+  services/     <feature>.service.ts — trả Promise, là chỗ duy nhất đổi khi có backend
   mocks/        dữ liệu giả lập, tách khỏi services
   types/        <feature>.types.ts
-  hooks/ services/ store/      còn rỗng ở phần lớn feature
+  store/        còn rỗng ở mọi feature
 shared/
   components/         dùng chung, KHÔNG biết miền bài toán
-    layout/           Sidebar, Topbar, WorkspaceSwitcher
+    layout/           Sidebar
   constants/enums.ts  nguồn sự thật cho enum miền
   constants/domain.ts nguồn sự thật cho nhãn / màu / thứ tự
-  hooks/ services/ stores/ types/
+  services/           apiClient.ts (lớp bọc fetch), queryClient.ts (cấu hình TanStack Query)
+  utils/              hàm thuần: number, format, storage, async
+  hooks/ stores/ types/
 ```
 
-Import một chiều: `app/` → `features/` → `shared/`. **Feature không import feature khác** — thứ dùng chung thì đưa lên `shared`.
+Import một chiều: `app/` → `features/` → `shared/`. **Feature không import feature khác** — thứ dùng chung thì đưa lên `shared`. Hai ngoại lệ có chủ đích và có giới hạn: dashboard (D-13) và review-detail (D-17), cả hai chỉ được import **type / mock / component presentational**, không được import container hay hook của feature khác.
+
+Bốn tầng, mỗi tầng một việc — đừng trộn:
+
+```
+service   Promise, không biết React          ← chỗ duy nhất đổi khi có backend
+queryKeys mảng khóa cache, rộng → hẹp
+hook      useQuery/useMutation, không xử lý dữ liệu
+container "use client", 4 nhánh loading/error/empty/data
+```
 
 ## 5. Đặt tên
 
 - Component `PascalCase.tsx`; container `XxxContainer.tsx`; hook `useXxx.ts`
-- `xxx.types.ts`, `xxx.constants.ts`, `xxx.service.ts`, `useXxxStore.ts`
+- `xxx.types.ts`, `xxx.constants.ts`, `xxx.queryKeys.ts`, `xxx.service.ts`, `useXxxStore.ts`
+- Factory khóa cache đặt tên theo số ít: `reviewKeys`, `ruleKeys`, `findingKeys`, `dashboardKeys`
 - Tên code và type bằng tiếng Anh; chuỗi hiển thị tiếng Việt, gom trong `constants` của feature, không rải khắp JSX
 
 ## 6. Styling
@@ -81,7 +98,25 @@ Import một chiều: `app/` → `features/` → `shared/`. **Feature không imp
 
 ## 7. Trạng thái UI bắt buộc
 
-Mọi khu vực dữ liệu phải xử lý đủ **loading / empty / error / data**. Hiện mới có empty (`EmptyState`) vì chưa có API — khi nối backend phải bổ sung skeleton và error.
+Mọi khu vực dữ liệu phải xử lý đủ **loading / empty / error / data**. Đã có đủ cả bốn ở năm trang đã nối TanStack Query; thứ tự kiểm luôn là:
+
+```tsx
+const { data, isPending, isError, error, refetch } = useXxx(workspaceSlug);
+
+isPending ? <SkeletonList label="Đang tải…" />
+: isError ? <ErrorState message="Không tải được…" detail={errorDetail(error)} onRetry={() => void refetch()} />
+: data.length === 0 ? <EmptyState message="Chưa có…" />
+: <XxxList items={data} />
+```
+
+Bốn điều bắt buộc:
+
+- Kiểm `isPending` / `isError` **trước** khi đọc `data`. Làm đúng thứ tự này thì TypeScript tự thu hẹp `data` về không-undefined, không cần `!` hay `?.`.
+- Khung chờ phải **giữ đúng bố cục trang thật** (đúng số ô, đúng số cột), nếu không nội dung nhảy khi dữ liệu về.
+- Khung chờ bọc trong `SkeletonBlock` (`role="status"` + `aria-busy`), không đặt `Skeleton` trần.
+- "Không tìm thấy" là **empty**, không phải **error**. Xem bẫy T-14: `queryFn` trả `undefined` sẽ biến nó thành error.
+
+Nút "Thử lại" của `ErrorState` nhận thẳng `refetch` của TanStack Query.
 
 ## 8. Theme
 

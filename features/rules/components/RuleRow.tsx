@@ -8,13 +8,17 @@ import {
   houseTypeScopeLabel,
   OPERATOR_CONFIG,
 } from "@/shared/constants/domain";
+import { headingTrail, ruleDisplayCode } from "../constants/rule.constants";
 import type { Rule } from "../types/rule.types";
 import { RuleActionMenu, type RuleAction } from "./RuleActionMenu";
 
 /**
  * Một quy tắc kiểm tra hiển thị theo dòng. Trái sang phải:
- * mã · tên · phép so sánh + giá trị · loại nhà áp dụng ·
- * badge loại kiểm tra · công tắc áp dụng · menu thao tác.
+ * mã · tên · yêu cầu · loại nhà áp dụng · loại kiểm tra · công tắc · menu.
+ *
+ * Ba cột phải chịu được giá trị rỗng, vì dữ liệu thật đọc từ Excel thường
+ * thiếu (file CHTK mẫu: `code` null 41/92, `checkType` null 92/92,
+ * `operator`/`value` null 62/92). Thứ **luôn có** là `title` và `requirement`.
  */
 export function RuleRow({
   rule,
@@ -25,10 +29,15 @@ export function RuleRow({
   onToggleActive: (next: boolean) => void;
   onAction: (action: RuleAction) => void;
 }) {
-  const checkType = CHECK_TYPE_CONFIG[rule.checkType];
-  const operator = OPERATOR_CONFIG[rule.operator];
+  const checkType = rule.checkType ? CHECK_TYPE_CONFIG[rule.checkType] : null;
+  const operator = rule.operator ? OPERATOR_CONFIG[rule.operator] : null;
   const scope = houseTypeScopeLabel(rule.houseTypes);
   const isAllHouseTypes = scope === "Mọi loại nhà";
+  const displayCode = ruleDisplayCode(rule);
+  const trail = headingTrail(rule.headings);
+
+  /** Có đủ phép so sánh + giá trị thì hiện dạng đối chiếu được; không thì hiện nguyên văn yêu cầu. */
+  const hasComparison = operator !== null && rule.value !== null;
 
   return (
     <div
@@ -37,21 +46,40 @@ export function RuleRow({
                  transition-colors duration-150 hover:bg-surface-hover
                  data-[inactive=true]:opacity-55"
     >
-      {/* Mã tiêu chí */}
+      {/* Mã tiêu chí — dòng biến thể không có mã riêng, hiện mã cha kèm dấu ↳ */}
       <Tooltip
         content={
-          <>
-            <TipTitle>Mã tiêu chí {rule.code}</TipTitle>
-            <TipText>
-              Vị trí trong bộ tiêu chuẩn CHTK. Chữ số đầu quyết định nhóm: 1.x
-              Mặt ngoài · 2.x Kích thước · 3.x Thang – Ramp · 4.x Cấu tạo · 5.x
-              Hoàn thiện.
-            </TipText>
-          </>
+          rule.code ? (
+            <>
+              <TipTitle>Mã tiêu chí {rule.code}</TipTitle>
+              <TipText>
+                Vị trí trong bộ tiêu chuẩn CHTK. Chữ số đầu quyết định nhóm: 1.x
+                Mặt ngoài · 2.x Kích thước · 3.x Thang – Ramp · 4.x Cấu tạo · 5.x
+                Hoàn thiện.
+              </TipText>
+              <TipMeta>
+                Dòng <span className="numeric">{rule.sourceRow}</span> trong file Excel
+              </TipMeta>
+            </>
+          ) : (
+            <>
+              <TipTitle>Dòng biến thể của {rule.parentCode ?? "mục cha"}</TipTitle>
+              <TipText>
+                Trong file Excel, dòng này nằm dưới một mã cha và không có mã
+                riêng — thường là một biến thể theo loại nhà.
+              </TipText>
+              {trail && <TipText>{trail}</TipText>}
+              <TipMeta>
+                Dòng <span className="numeric">{rule.sourceRow}</span> trong file Excel
+              </TipMeta>
+            </>
+          )
         }
       >
-        <span className="numeric w-14 shrink-0 text-sm text-text-secondary">
-          {rule.code}
+        <span className="numeric w-14 shrink-0 truncate text-sm text-text-secondary">
+          {rule.code ?? (
+            <span className="text-text-muted">↳ {rule.parentCode ?? "—"}</span>
+          )}
         </span>
       </Tooltip>
 
@@ -61,10 +89,8 @@ export function RuleRow({
         content={
           <>
             <TipTitle>{rule.title}</TipTitle>
-            {rule.note && <TipText>{rule.note}</TipText>}
-            <TipMeta>
-              {rule.isActive ? "Đang áp dụng" : "Đang tạm ngưng"}
-            </TipMeta>
+            {trail && <TipText>{trail}</TipText>}
+            <TipMeta>{rule.isActive ? "Đang áp dụng" : "Đang tạm ngưng"}</TipMeta>
           </>
         }
       >
@@ -73,21 +99,48 @@ export function RuleRow({
         </span>
       </Tooltip>
 
-      {/* Phép so sánh + giá trị */}
+      {/* Yêu cầu — phép so sánh + giá trị khi đọc được, nếu không thì nguyên văn */}
       <Tooltip
         className="min-w-0 basis-72"
         content={
-          <>
-            <TipTitle>{operator.label}</TipTitle>
-            <TipText>{rule.value}</TipText>
-          </>
+          hasComparison ? (
+            <>
+              <TipTitle>{operator.label}</TipTitle>
+              <TipText>{rule.value}</TipText>
+              {rule.requirement && <TipMeta>{rule.requirement}</TipMeta>}
+            </>
+          ) : (
+            <>
+              <TipTitle>Tiêu chuẩn áp dụng</TipTitle>
+              {rule.requirementLines.length > 0 ? (
+                rule.requirementLines.map((line, index) => (
+                  <TipText key={index}>• {line}</TipText>
+                ))
+              ) : (
+                <TipText>Chưa có nội dung tiêu chuẩn cho dòng này.</TipText>
+              )}
+              <TipMeta>
+                Chưa quy được về phép so sánh máy đối chiếu tự động được.
+              </TipMeta>
+            </>
+          )
         }
       >
         <span className="flex min-w-0 items-baseline gap-1.5 text-sm">
-          <span className="shrink-0 rounded-sm bg-surface-sunken px-1.5 py-0.5 text-xs text-text-secondary">
-            {operator.label}
-          </span>
-          <span className="min-w-0 truncate text-text-secondary">{rule.value}</span>
+          {hasComparison ? (
+            <>
+              <span className="shrink-0 rounded-sm bg-surface-sunken px-1.5 py-0.5 text-xs text-text-secondary">
+                {operator.label}
+              </span>
+              <span className="min-w-0 truncate text-text-secondary">
+                {rule.value}
+              </span>
+            </>
+          ) : (
+            <span className="min-w-0 truncate text-text-muted">
+              {rule.requirementLines[0] || rule.requirement || "—"}
+            </span>
+          )}
         </span>
       </Tooltip>
 
@@ -116,36 +169,48 @@ export function RuleRow({
           </span>
         </Tooltip>
 
-        {/* Badge loại kiểm tra */}
+        {/* Loại kiểm tra — Excel không có cột này nên thường chưa phân loại */}
         <Tooltip
           align="right"
           content={
-            <>
-              <TipTitle>{checkType.title}</TipTitle>
-              <TipText>{checkType.method}</TipText>
-              <TipMeta>
-                Độ tin cậy kỳ vọng:{" "}
-                <span className="numeric text-text-secondary">
-                  {checkType.expectedConfidence}
-                </span>
-              </TipMeta>
-            </>
+            checkType ? (
+              <>
+                <TipTitle>{checkType.title}</TipTitle>
+                <TipText>{checkType.method}</TipText>
+                <TipMeta>
+                  Độ tin cậy kỳ vọng:{" "}
+                  <span className="numeric text-text-secondary">
+                    {checkType.expectedConfidence}
+                  </span>
+                </TipMeta>
+              </>
+            ) : (
+              <>
+                <TipTitle>Chưa phân loại kiểm tra</TipTitle>
+                <TipText>
+                  File Excel không có cột loại kiểm tra. Tiêu chí sẽ được gán
+                  nhóm A–D ở bước phân loại sau, bằng máy hoặc bằng người.
+                </TipText>
+              </>
+            )
           }
         >
           <span
-            className={`inline-flex size-6 items-center justify-center rounded-sm text-xs font-medium ${checkType.badge}`}
+            className={`inline-flex size-6 items-center justify-center rounded-sm text-xs font-medium ${
+              checkType ? checkType.badge : "bg-surface-sunken text-text-muted"
+            }`}
           >
-            {rule.checkType}
+            {rule.checkType ?? "–"}
           </span>
         </Tooltip>
 
         <Switch
           checked={rule.isActive}
           onChange={onToggleActive}
-          label={`Áp dụng tiêu chí ${rule.code}`}
+          label={`Áp dụng tiêu chí ${displayCode}`}
         />
 
-        <RuleActionMenu ruleCode={rule.code} onAction={onAction} />
+        <RuleActionMenu ruleCode={displayCode} onAction={onAction} />
       </span>
     </div>
   );

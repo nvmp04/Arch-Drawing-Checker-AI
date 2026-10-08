@@ -1,16 +1,20 @@
+"use client";
+
 import Link from "next/link";
 
 import { EmptyState } from "@/shared/components/EmptyState";
+import { ErrorState, errorDetail } from "@/shared/components/ErrorState";
 import { PlusIcon } from "@/shared/components/icons";
+import { SkeletonList } from "@/shared/components/Skeleton";
+import { useReviews } from "../hooks/useReviews";
 import { ReviewListItem } from "../components/ReviewListItem";
-import { reviewsService } from "../services/reviews.service";
 
-export async function ReviewListContainer({
+export function ReviewListContainer({
   workspaceSlug,
 }: {
   workspaceSlug: string;
 }) {
-  const reviews = await reviewsService.listReviews(workspaceSlug);
+  const { data: reviews, isPending, isError, error, refetch } = useReviews(workspaceSlug);
 
   return (
     <section className="space-y-4">
@@ -35,7 +39,15 @@ export async function ReviewListContainer({
         </Link>
       </header>
 
-      {reviews.length === 0 ? (
+      {isPending ? (
+        <SkeletonList rows={4} label="Đang tải danh sách hồ sơ thẩm định…" />
+      ) : isError ? (
+        <ErrorState
+          message="Không tải được danh sách hồ sơ thẩm định."
+          detail={errorDetail(error)}
+          onRetry={() => void refetch()}
+        />
+      ) : reviews.length === 0 ? (
         <div className="rounded-lg bg-surface-raised px-4 py-10 text-center shadow-ds-small">
           <EmptyState message="Chưa có hồ sơ thẩm định nào." />
         </div>

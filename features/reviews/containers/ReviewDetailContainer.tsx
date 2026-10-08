@@ -1,11 +1,47 @@
-import { MOCK_FINDINGS } from "@/features/findings/mocks/findings.mock";
+"use client";
+
 import { EmptyState } from "@/shared/components/EmptyState";
-import { reviewsService } from "../services/reviews.service";
+import { ErrorState, errorDetail } from "@/shared/components/ErrorState";
+import { Skeleton, SkeletonBlock } from "@/shared/components/Skeleton";
 import { ReviewWorkspace } from "../components/ReviewWorkspace";
+import { useReviewDetail } from "../hooks/useReviewDetail";
 
-export async function ReviewDetailContainer({ reviewId }: { reviewId: string }) {
-  const review = await reviewsService.getReview(reviewId);
+/** Khung chờ mô phỏng bố cục thật: khung xem bản vẽ bên trái, khung kết quả bên phải. */
+function WorkspaceSkeleton() {
+  return (
+    <SkeletonBlock label="Đang tải hồ sơ thẩm định…" className="space-y-4">
+      <Skeleton className="h-10 w-full" />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_var(--spacing-inspector)]">
+        <Skeleton className="h-[60vh] w-full" />
+        <Skeleton className="h-[60vh] w-full" />
+      </div>
+    </SkeletonBlock>
+  );
+}
 
+export function ReviewDetailContainer({
+  workspaceSlug,
+  reviewId,
+}: {
+  workspaceSlug: string;
+  reviewId: string;
+}) {
+  const { review, findings, isPending, isError, error, refetch } =
+    useReviewDetail(workspaceSlug, reviewId);
+
+  if (isPending) return <WorkspaceSkeleton />;
+
+  if (isError) {
+    return (
+      <ErrorState
+        message="Không tải được hồ sơ thẩm định này."
+        detail={errorDetail(error)}
+        onRetry={refetch}
+      />
+    );
+  }
+
+  // Tải xong nhưng không có hồ sơ nào mang mã này — đây là trạng thái rỗng, không phải lỗi.
   if (!review) {
     return (
       <div className="rounded-lg bg-surface-raised px-4 py-10 text-center shadow-ds-small">
@@ -13,10 +49,6 @@ export async function ReviewDetailContainer({ reviewId }: { reviewId: string }) 
       </div>
     );
   }
-
-  // MOCK — D-12: chỉ hồ sơ rv-2026-018 có đủ dữ liệu tiêu chí chi tiết; hồ sơ
-  // khác sẽ hiện khung xem trống. Khi có backend, đây là GET /findings?reviewId=.
-  const findings = MOCK_FINDINGS.filter((finding) => finding.reviewId === review.id);
 
   return <ReviewWorkspace review={review} findings={findings} />;
 }

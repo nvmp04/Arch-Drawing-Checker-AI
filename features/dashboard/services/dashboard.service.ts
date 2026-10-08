@@ -11,8 +11,13 @@ import {
   SEVERITY_ORDER,
 } from "@/shared/constants/domain";
 import type { FindingStatus } from "@/shared/constants/enums";
+import { resolveAfterDelay } from "@/shared/utils/async";
+import { percentOf } from "@/shared/utils/number";
+import { MOCK_FINDINGS } from "@/features/findings/mocks/findings.mock";
 import type { Finding } from "@/features/findings/types/finding.types";
+import { MOCK_REVIEWS } from "@/features/reviews/mocks/reviews.mock";
 import type { Review } from "@/features/reviews/types/review.types";
+import { MOCK_RULES } from "@/features/rules/mocks/rules.mock";
 import type { Rule } from "@/features/rules/types/rule.types";
 import type { DashboardSummary } from "../types/dashboard.types";
 
@@ -79,7 +84,7 @@ export function buildDashboardSummary({
       concluded,
       passed,
       missing,
-      percent: concluded > 0 ? Math.round((passed / concluded) * 100) : 0,
+      percent: percentOf(passed, concluded),
     };
   });
 
@@ -90,10 +95,7 @@ export function buildDashboardSummary({
 
   return {
     actionRequired: sumOf(statusTotals, ACTION_REQUIRED_STATUSES),
-    averagePassRate:
-      passRateDenominator > 0
-        ? Math.round((passRateNumerator / passRateDenominator) * 100)
-        : 0,
+    averagePassRate: percentOf(passRateNumerator, passRateDenominator),
     passRateNumerator,
     passRateDenominator,
     testedCriteria,
@@ -144,3 +146,40 @@ export function pickPriorityFindings({
 
   return picked;
 }
+
+/**
+ * Toàn bộ dữ liệu một lần tải của trang Bảng điều khiển.
+ *
+ * `recentReviews` nằm trong payload này chứ không lấy từ `useReviews`: dashboard
+ * được phép đọc chéo feature (D-13) nhưng chỉ qua **type / mock / component
+ * presentational**, không qua hook của feature khác.
+ */
+export type DashboardOverview = {
+  summary: DashboardSummary;
+  priorityFindings: readonly Finding[];
+  recentReviews: readonly Review[];
+};
+
+export const dashboardService = {
+  /**
+   * MOCK — sau này là `GET /workspaces/:slug/dashboard`, trả về đúng hình dạng
+   * này. Khi đó toàn bộ import chéo feature ở đầu file bỏ được, chỉ còn một
+   * lời gọi `apiClient.get`.
+   */
+  getOverview(workspaceSlug: string): Promise<DashboardOverview> {
+    void workspaceSlug;
+
+    return resolveAfterDelay({
+      summary: buildDashboardSummary({
+        reviews: MOCK_REVIEWS,
+        findings: MOCK_FINDINGS,
+        rules: MOCK_RULES,
+      }),
+      priorityFindings: pickPriorityFindings({
+        reviews: MOCK_REVIEWS,
+        findings: MOCK_FINDINGS,
+      }),
+      recentReviews: MOCK_REVIEWS,
+    });
+  },
+};

@@ -2,11 +2,11 @@ import type { ZoneOption } from "../types/review.types";
 
 /**
  * MOCK DATA — phân khu để chọn khi tạo hồ sơ thẩm định mới.
- * Khớp tên với `zoneName` đang dùng trong `reviews.mock.ts`.
- * Khi có backend, đây là `GET /zones`.
+ *
+ * Chưa có `GET /zones`, và backend (giai đoạn khả thi, chưa có CSDL) chỉ nhận
+ * **đúng** id demo dưới đây khi tạo hồ sơ — id khác trả `404 ZONE_NOT_FOUND`.
+ * Nguồn: `arch-drawing-checker-backend/docs/contracts/fe-review-upload.md` §0.1.
  */
 export const MOCK_ZONE_OPTIONS: readonly ZoneOption[] = [
-  { id: "zn-pn2-dn", name: "PN2 Đà Nẵng" },
-  { id: "zn-vs1-hcm", name: "Vinhomes Sunrise HCM" },
-  { id: "zn-ar3-hn", name: "An Riverside Hà Nội" },
+  { id: "b3f1c7a2-5d4e-4f6a-9c8b-2e1d0f3a4b01", name: "PN2 Đà Nẵng" },
 ];

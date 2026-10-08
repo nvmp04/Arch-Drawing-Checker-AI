@@ -47,14 +47,20 @@ export type ZoneOption = {
   name: string;
 };
 
-/** Dữ liệu gửi đi khi tạo một hồ sơ thẩm định mới. */
+/**
+ * Dữ liệu gửi đi khi tạo một hồ sơ thẩm định mới — thành các trường
+ * `multipart/form-data` của `POST /workspaces/:slug/reviews`. Backend từ chối
+ * trường thừa (`400`), nên type này phải khớp đúng danh sách trường đó.
+ */
 export type CreateReviewInput = {
   name: string;
   zoneId: string;
-  standardSetId: string;
+  /** Id bộ tiêu chuẩn CHTK. Backend gọi là `ruleSetId`, không phải `standardSetId`. */
+  ruleSetId: string;
   houseType: HouseType;
   categories: readonly ChtkCategory[];
-  file: { name: string; sizeBytes: number };
+  /** File PDF thật — gửi nguyên đối tượng `File`, trình duyệt tự đặt boundary. */
+  file: File;
 };
 
 /** Số phần tử AI đã phân tích được, phân rã theo loại kiểm tra. */

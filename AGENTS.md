@@ -12,7 +12,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Hệ thống hỗ trợ soát bản vẽ kiến trúc bằng VLM + OCR + document parsing. Đồ án tốt nghiệp, 2 người, 6 tháng, 2 giai đoạn: nghiên cứu/đánh giá rồi xây dựng hệ thống (giai đoạn 2 giữ ở mức proof-of-concept).
 
-**Giai đoạn hiện tại: dựng khung xương UI bằng mock data.** Giao diện phải hiện đầy đủ và bấm được; chưa có backend, chưa có tính năng thật ngoài điều hướng và tương tác cục bộ trong trang.
+**Giai đoạn hiện tại: khung xương UI bằng mock data, đang nối dần vào backend thật.**
+
+Backend nằm ở repo `arch-drawing-checker-backend` (chạy ở `http://localhost:4000/api/v1`), phần lớn endpoint còn trả `501 NOT_IMPLEMENTED`. Đã nối thật: **nạp file Excel ở trang Tiêu chuẩn CHTK** (`features/rules`). Mọi phần còn lại vẫn mock.
+
+Trước khi nối thêm bất kỳ endpoint nào, đọc `arch-drawing-checker-backend/docs/frontend-integration.md` (bảng ghép mock → endpoint) và `docs/api/conventions.md` (envelope, mã lỗi, quy ước upload).
 
 ## Đọc gì trước khi code
 
@@ -33,12 +37,15 @@ Nguồn sự thật trong code, ưu tiên hơn mọi tài liệu nếu có mâu 
 - `shared/constants/enums.ts` — enum miền
 - `shared/constants/domain.ts` — nhãn, màu, thứ tự
 - `app/globals.css` — giá trị token
+- `shared/services/apiClient.ts` — **điểm nối backend duy nhất**: envelope `{data}`, lỗi `{error:{code,message,details}}`, `ApiError`
 
 ## Stack
 
 Next.js 16.3.5 (App Router) · React 19.2.8 · TypeScript strict · Tailwind v4 (`@tailwindcss/postcss`, không có `tailwind.config`) · alias `@/*` → repo root, không có `src/`.
 
-Dependencies chỉ có `next`, `react`, `react-dom`. Không có clsx / cva / lucide / zustand — xem `decisions.md` D-02 trước khi cài thêm.
+Lấy dữ liệu: **TanStack Query v5** (D-22). Bốn tầng, mỗi tầng một việc — `service` → `queryKeys` → `hook` → `container`; xem `component-recipes.md` §8b. Mọi vùng dữ liệu phải có đủ **loading / error / empty / data** (`ui-conventions.md` §7).
+
+Dependencies: `next`, `react`, `react-dom`, `pdfjs-dist` (D-16), `pdf-lib` (D-19), `@tanstack/react-query` (D-22). Không có clsx / cva / lucide / zustand — xem `decisions.md` D-02 trước khi cài thêm.
 
 ## Phạm vi đã chốt — không mở rộng khi chưa hỏi
 
@@ -57,7 +64,7 @@ Dependencies chỉ có `next`, `react`, `react-dom`. Không có clsx / cva / luc
 7. **Trạng thái không bao giờ chỉ bằng màu** — luôn kèm icon và nhãn chữ.
 8. **Canvas bản vẽ luôn nền trắng** ở cả hai theme.
 9. **Spacing chỉ theo thang 4px**, khoảng cách giữa block mặc định 24px (`gap-6`).
-10. Import một chiều: `app/` → `features/` → `shared/`. Feature không import feature. `page.tsx` chỉ import container.
+10. Import một chiều: `app/` → `features/` → `shared/`. Feature không import feature — **trừ hai ngoại lệ đã ghi** (D-13 dashboard, D-17 review-detail), và cả hai chỉ được import *type / mock / component presentational*, không bao giờ container hay hook. `page.tsx` chỉ import container.
 11. Code và type tiếng Anh; chuỗi hiển thị tiếng Việt, gom trong `constants` của feature.
 
 ## Quy trình làm việc

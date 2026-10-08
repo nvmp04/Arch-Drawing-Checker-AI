@@ -16,6 +16,7 @@ import {
   HOUSE_TYPE_CONFIG,
   PASSED_STATUSES,
 } from "@/shared/constants/domain";
+import { percentOf } from "@/shared/utils/number";
 import type { Review } from "../types/review.types";
 
 /** Màu của con số tỷ lệ phụ thuộc chính giá trị đó. */
@@ -60,7 +61,7 @@ export function ReviewListItem({
     (sum, s) => sum + review.statusCounts[s],
     0,
   );
-  const passRate = concluded > 0 ? Math.round((passed / concluded) * 100) : 0;
+  const passRate = percentOf(passed, concluded);
   const actionRequired = ACTION_REQUIRED_STATUSES.reduce(
     (sum, s) => sum + review.statusCounts[s],
     0,

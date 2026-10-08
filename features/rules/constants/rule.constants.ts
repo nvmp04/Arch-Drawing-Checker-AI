@@ -84,3 +84,68 @@ export function filterValueLabel(
       return OPERATOR_CONFIG[value as keyof typeof OPERATOR_CONFIG].label;
   }
 }
+
+/* -------------------------------------------------------------------------
+ * Nạp bộ tiêu chuẩn từ file Excel
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Giá trị cho thuộc tính `accept` của input file.
+ *
+ * Liệt kê cả MIME type lẫn đuôi file là có chủ đích: Windows đôi khi báo MIME
+ * rỗng hoặc `application/octet-stream` cho `.xlsx`, khi đó chỉ còn đuôi file là
+ * căn cứ. Đây chỉ là gợi ý cho hộp thoại chọn file — vẫn phải kiểm lại trong code.
+ */
+export const STANDARD_SET_UPLOAD_ACCEPT =
+  ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+/**
+ * Đuôi file được nhận. Đây mới là phép kiểm thật, không tin vào MIME type.
+ *
+ * **Chỉ `.xlsx`.** Backend đọc file bằng exceljs và trả `415
+ * UNSUPPORTED_MEDIA_TYPE` — "Chỉ nhận file Excel .xlsx (không nhận .xls,
+ * .csv)" — nên nhận `.xls` ở client chỉ để người dùng chờ rồi bị từ chối.
+ */
+export const STANDARD_SET_FILE_EXTENSIONS = [".xlsx"] as const;
+
+/** Khớp `MAX_EXCEL_UPLOAD_MB` bên backend. Vượt ngưỡng backend trả `413`. */
+export const MAX_STANDARD_SET_FILE_SIZE_MB = 10;
+
+/**
+ * Gợi ý hành động thêm cho vài mã lỗi của backend.
+ *
+ * `error.message` của backend đã là tiếng Việt hiển thị thẳng được
+ * (conventions §4), nên **không thay thế** nó — chỉ nối thêm câu chỉ việc phải
+ * làm khi câu gốc chưa nói.
+ */
+export const IMPORT_ERROR_HINTS: Readonly<Record<string, string>> = {
+  EXCEL_HEADER_NOT_FOUND:
+    'Sheet cần có dòng tiêu đề gồm "STT", "TIÊU CHÍ…" và "TIÊU CHUẨN ÁP DỤNG".',
+  EXCEL_UNREADABLE:
+    "Thử mở lại bằng Excel rồi lưu dạng .xlsx, hoặc kiểm tra file có bị hỏng khi tải về không.",
+  PAYLOAD_TOO_LARGE: `Giới hạn ${MAX_STANDARD_SET_FILE_SIZE_MB}MB cho mỗi file.`,
+};
+
+/* -------------------------------------------------------------------------
+ * Hiển thị tiêu chí có trường rỗng
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Nhãn định danh một tiêu chí khi hiển thị.
+ *
+ * Dòng biến thể theo loại nhà trong Excel **không có mã riêng** (`code: null`,
+ * 41/92 dòng trong file CHTK thật) — khi đó định danh là mã cha. Dùng cho
+ * `aria-label`, `title` và mọi chỗ cần một chuỗi nhận diện.
+ */
+export function ruleDisplayCode(rule: {
+  code: string | null;
+  parentCode: string | null;
+  title: string;
+}): string {
+  return rule.code ?? rule.parentCode ?? rule.title;
+}
+
+/** Đường dẫn tiêu đề dẫn tới một dòng biến thể, ví dụ "Tường xây › Trát vữa". */
+export function headingTrail(headings: readonly string[]): string {
+  return headings.join(" › ");
+}

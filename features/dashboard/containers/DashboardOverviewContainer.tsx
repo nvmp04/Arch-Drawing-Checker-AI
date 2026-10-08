@@ -1,16 +1,14 @@
-import { MOCK_FINDINGS } from "@/features/findings/mocks/findings.mock";
-import { MOCK_REVIEWS } from "@/features/reviews/mocks/reviews.mock";
-import { MOCK_RULES } from "@/features/rules/mocks/rules.mock";
+"use client";
+
+import { ErrorState, errorDetail } from "@/shared/components/ErrorState";
+import { Skeleton, SkeletonBlock } from "@/shared/components/Skeleton";
 import { CheckTypeBreakdownChart } from "../components/CheckTypeBreakdownChart";
 import { GroupPassRateChart } from "../components/GroupPassRateChart";
 import { KpiCard } from "../components/KpiCard";
 import { PriorityFindingList } from "../components/PriorityFindingList";
 import { RecentReviewList } from "../components/RecentReviewList";
 import { SectionCard } from "../components/SectionCard";
-import {
-  buildDashboardSummary,
-  pickPriorityFindings,
-} from "../services/dashboard.service";
+import { useDashboardSummary } from "../hooks/useDashboardSummary";
 
 /** Màu của con số tỷ lệ phụ thuộc chính giá trị đó. */
 function passRateTone(percent: number): string {
@@ -19,33 +17,71 @@ function passRateTone(percent: number): string {
   return "text-pass-text";
 }
 
+/** Khung chờ giữ đúng bốn hàng của dashboard thật, để bố cục không nhảy khi dữ liệu về. */
+function DashboardSkeleton() {
+  return (
+    <SkeletonBlock label="Đang tải số liệu tổng quan…" className="space-y-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }, (_, index) => (
+          <Skeleton key={index} className="h-32 w-full" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+      <Skeleton className="h-72 w-full" />
+      <Skeleton className="h-64 w-full" />
+    </SkeletonBlock>
+  );
+}
+
 export function DashboardOverviewContainer({
   workspaceSlug,
 }: {
   workspaceSlug: string;
 }) {
-  // MOCK — thay bằng một lời gọi API trả về DashboardSummary khi có backend.
-  const summary = buildDashboardSummary({
-    reviews: MOCK_REVIEWS,
-    findings: MOCK_FINDINGS,
-    rules: MOCK_RULES,
-  });
+  const { data, isPending, isError, error, refetch } =
+    useDashboardSummary(workspaceSlug);
 
-  const priorityFindings = pickPriorityFindings({
-    reviews: MOCK_REVIEWS,
-    findings: MOCK_FINDINGS,
-  });
+  const header = (
+    <header className="space-y-1">
+      <h1 className="text-xl font-semibold tracking-tight text-text-primary">
+        Bảng điều khiển
+      </h1>
+      <p className="text-sm text-text-muted">
+        Tổng quan chất lượng hồ sơ đang thẩm định và những mục cần người xử lý.
+      </p>
+    </header>
+  );
+
+  if (isPending) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <DashboardSkeleton />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="space-y-6">
+        {header}
+        <ErrorState
+          message="Không tải được số liệu tổng quan."
+          detail={errorDetail(error)}
+          onRetry={() => void refetch()}
+        />
+      </div>
+    );
+  }
+
+  const { summary, priorityFindings, recentReviews } = data;
 
   return (
     <div className="space-y-6">
-      <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight text-text-primary">
-          Bảng điều khiển
-        </h1>
-        <p className="text-sm text-text-muted">
-          Tổng quan chất lượng hồ sơ đang thẩm định và những mục cần người xử lý.
-        </p>
-      </header>
+      {header}
 
       {/* Hàng 1 — 4 ô số liệu */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -131,7 +167,7 @@ export function DashboardOverviewContainer({
       />
 
       {/* Hàng 4 — hồ sơ gần đây */}
-      <RecentReviewList reviews={MOCK_REVIEWS} workspaceSlug={workspaceSlug} />
+      <RecentReviewList reviews={recentReviews} workspaceSlug={workspaceSlug} />
     </div>
   );
 }

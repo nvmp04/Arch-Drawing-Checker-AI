@@ -1,5 +1,6 @@
 import { TipMeta, TipText, TipTitle, Tooltip } from "@/shared/components/Tooltip";
 import type { ReasoningGroup } from "@/shared/constants/enums";
+import { formatPercent } from "@/shared/utils/format";
 import {
   CONFIDENCE_THRESHOLD,
   GROUP_CONFIG,
@@ -26,8 +27,8 @@ export function ConfidenceBadge({
           <TipTitle>Độ tin cậy của phép trích xuất</TipTitle>
           <TipText>
             {isLow
-              ? `Dưới ngưỡng ${Math.round(CONFIDENCE_THRESHOLD * 100)}% — kết luận của máy cần người thẩm định xác nhận.`
-              : `Trên ngưỡng ${Math.round(CONFIDENCE_THRESHOLD * 100)}% — kết luận của máy đủ tin cậy để dùng trực tiếp.`}
+              ? `Dưới ngưỡng ${formatPercent(CONFIDENCE_THRESHOLD)} — kết luận của máy cần người thẩm định xác nhận.`
+              : `Trên ngưỡng ${formatPercent(CONFIDENCE_THRESHOLD)} — kết luận của máy đủ tin cậy để dùng trực tiếp.`}
           </TipText>
           {expected && (
             <TipMeta>
@@ -43,7 +44,7 @@ export function ConfidenceBadge({
           isLow ? "text-confidence-low" : "text-confidence-high"
         }`}
       >
-        {Math.round(value * 100)}%
+        {formatPercent(value)}
       </span>
     </Tooltip>
   );

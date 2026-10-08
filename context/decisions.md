@@ -198,3 +198,153 @@ Render trang một lần rồi CSS-scale làm nét vỡ khi zoom sâu — bitmap
 ## T-13 · Tàn ảnh khi đổi lớp chi tiết — đừng `drawImage` vào canvas đang hiện rồi mới `setState`
 
 Bản đầu vẽ xong vào canvas offscreen, `drawImage` sang canvas đang hiện, **rồi** mới `setDetail` (transform mới). Giữa hai bước là ít nhất một khung hình nội dung mới nằm sai vị trí so với transform cũ → tàn ảnh. Sửa bằng double buffer: hai canvas luân phiên, vẽ thẳng vào cái đang ẩn; xong mới `setDetail({ slot })` — hiện/ẩn và transform đổi cùng một lần commit. Thêm overscan 15% mỗi phía để kéo nhẹ không lộ mép lớp nền mờ.
+
+## D-22 · Cài TanStack Query làm lớp dữ liệu cho cả dự án
+
+`@tanstack/react-query` v5 (dep) + `@tanstack/react-query-devtools` (devDep).
+
+Đây là lần cân nhắc lại D-02 thứ ba, và thuộc cùng loại với `pdfjs-dist`/`pdf-lib`: thứ **không có cách hợp lý để tự viết gọn hơn**. Cache theo khóa, chống gọi trùng, khử trạng thái cũ, `invalidate` sau khi ghi, retry có phân biệt loại lỗi — tự viết ra sẽ là một thư viện nửa vời, và nó là nền cho toàn bộ phần nối backend ở giai đoạn 2.
+
+Cấu hình đặt ở `shared/services/queryClient.ts`, các mốc đáng chú ý:
+
+- `staleTime: 60s` chứ không phải 0. Có SSR thì `staleTime: 0` khiến client refetch ngay lần hydrate đầu, tải hai lần cho một lần xem.
+- `refetchOnWindowFocus: false`. Người thẩm định liên tục rời tab đi đọc tiêu chuẩn rồi quay lại; tự refetch làm danh sách nhảy dưới tay họ.
+- `retry` đọc `ApiError.isRetryable` — lỗi 4xx thử lại vẫn 4xx.
+- `getQueryClient()` tạo mới trên server, giữ một bản trên trình duyệt. **Không** được tạo `new QueryClient()` ở module scope: trên server module dùng chung giữa request của mọi người dùng, sẽ rò dữ liệu người này sang người kia.
+
+Khóa cache nằm ở `features/<feature>/constants/<feature>.queryKeys.ts`, đi từ rộng tới hẹp (`["reviews"]` → `["reviews","list",slug]`) để `invalidateQueries` dọn được theo tầng. Không viết mảng khóa thẳng trong hook — gõ nhầm một chữ là cache tách đôi mà không có lỗi nào báo.
+
+## D-23 · Container thành Client Component, `page.tsx` vẫn là Server Component
+
+Trước D-22, một số container là `async` Server Component gọi thẳng service (`ReviewListContainer`, `NewReviewContainer`, `ReviewDetailContainer`), số còn lại import thẳng `MOCK_*`. Nay **cả sáu container đều `"use client"`** và lấy dữ liệu qua hook của feature.
+
+Lý do chọn cách này thay vì server prefetch + `HydrationBoundary`: cách kia buộc mỗi trang phải viết hai lớp (server prefetch + client hook) cho cùng một query, trong khi cái dự án đang thiếu là **trạng thái loading/error thật** (`ui-conventions.md` §7 ghi nợ từ đầu). Container client có đủ bốn nhánh loading / error / empty / data trong một chỗ đọc được.
+
+`page.tsx` **không** đổi: vẫn là Server Component, vẫn `await params`, vẫn chỉ import container. Ranh giới client bắt đầu ở container.
+
+Hệ quả cần biết: HTML server trả về là **khung chờ**, không phải dữ liệu. Không SEO được nội dung danh sách — chấp nhận được vì đây là app nội bộ sau đăng nhập. Khi nào cần SSR nội dung thật thì thêm prefetch + `HydrationBoundary` ở `page.tsx`, hook không phải sửa.
+
+Kéo theo: `RuleListContainer` nhận thêm prop `workspaceSlug` (cần cho `queryKey`), nên hai route `/[slug]/rules` và `/[slug]/zones/[zoneId]/rules` đều phải truyền — đúng bẫy T-03.
+
+## D-24 · `shared/utils/` — tầng thứ năm của `shared`
+
+Thêm `shared/utils/{number,format,storage,async}.ts`, gom những hàm thuần không phải hook, không phải service, không biết miền bài toán.
+
+Vì sao cần: `clamp` viết cục bộ trong `DrawingPageViewer`, công thức `Math.round((a/b)*100)` chép ở bốn chỗ (dashboard ×2, `FindingResultPanel`, `ReviewListItem`), `resolveAfterDelay` chép ở hai service, và mỗi nơi đọc Web Storage tự bọc `try/catch` + guard SSR một kiểu khác nhau.
+
+`percentOf(part, whole)` trả 0 khi mẫu số ≤ 0 thay vì `NaN` — trang thống kê luôn có trường hợp "chưa tiêu chí nào kết luận được", và `NaN%` lọt ra UI là lỗi không ai để ý tới khi đọc code.
+
+Hai hook stub trong `shared/hooks` trước đây trả **giá trị giả** (`useDebounce` trả nguyên value, `useMediaQuery` luôn trả `false`) — nguy hiểm hơn là chưa có, vì nơi gọi tưởng nó chạy. Nay đã điền thật; `useMediaQuery` dùng `useSyncExternalStore` nên không lệch hydration, đổi lại **lần render đầu ở client luôn `false`** — nhánh ứng với `true` phải là nhánh phụ.
+
+## T-14 · `queryFn` của TanStack Query không được trả `undefined`
+
+`reviewsService.getReview()` trả `Review | undefined` (không tìm thấy thì `undefined`). Đưa thẳng vào `queryFn` thì TanStack Query coi đó là lỗi — `Query data cannot be undefined` — nên trang hồ sơ không tồn tại hiện **khung lỗi kèm nút "Thử lại"** thay vì khung "Không tìm thấy hồ sơ thẩm định này". Nút thử lại còn thử lại vô nghĩa mãi.
+
+`undefined` là giá trị TanStack Query dành riêng để đánh dấu "chưa có dữ liệu". Cách xử lý: `queryFn` trả `?? null`, hook đổi ngược về `undefined` cho nơi gọi. Bắt được bằng cách mở trình duyệt thử một `reviewId` bịa — build và type check đều xanh.
+
+## T-15 · `*/` trong JSDoc đóng sớm block comment
+
+Viết `` `features/*/services/*.service.ts` `` trong một khối `/** ... */` làm dấu `*/` ở giữa đóng luôn comment, phần còn lại thành code → `error TS2304: Cannot find name 'services'`. Lỗi báo ở dòng comment nên rất dễ đọc nhầm.
+
+Cách xử lý: đừng viết đường dẫn có glob trong block comment; diễn đạt bằng lời ("service của từng feature") hoặc dùng `//`.
+
+## D-25 · Bộ tiêu chuẩn CHTK **chính là** danh sách tiêu chí, và do `features/rules` sở hữu
+
+Một bộ tiêu chuẩn không phải thực thể tách rời tiêu chí — nó là **nội dung của một file Excel người dùng nạp lên**. Nạp file là tạo bộ; xem bộ là xem tiêu chí của nó. Vì vậy chủ sở hữu khái niệm này là `features/rules`, nơi đã sở hữu `Rule`.
+
+Trang Tiêu chuẩn CHTK giờ xem **đúng một bộ tại một thời điểm**, chọn qua dropdown ở `StandardSetBar`. Trước đây trang hiển thị `MOCK_RULES` như thể đó là bộ duy nhất của cả dự án — sai về nghĩa ngay khi có bộ thứ hai.
+
+Hệ quả kỹ thuật:
+
+- `ruleKeys.list()` khóa theo **`standardSetId`**, không theo `workspaceSlug`: đổi bộ là đổi hẳn tập dữ liệu, và mỗi bộ giữ cache riêng nên bấm qua lại không tải lại.
+- `RuleList` giữ danh sách, bộ lọc và các công tắc trong state cục bộ khởi tạo từ prop, mà state khởi tạo từ prop **không tự cập nhật khi prop đổi**. Container truyền `key={activeId}` để đổi bộ là dựng lại component — cũng đúng về nghĩa, vì bộ lọc của bộ cũ không còn ý nghĩa với bộ mới.
+- Bộ đang chọn suy ra bằng biểu thức `chosenId ?? danh sách[0]?.id ?? ""`, **không** đồng bộ bằng `useEffect` — vừa thừa một lần render, vừa bị ESLint chặn (`react-hooks/set-state-in-effect`).
+
+**Nợ để lại có ý thức:** `features/reviews` vẫn có `ChtkStandardSet` + `MOCK_STANDARD_SETS` riêng, phục vụ việc khác (chọn bộ nào để áp cho một hồ sơ thẩm định) và hiện liệt kê 2 bộ trong khi trang rules chỉ có 1. Chưa gộp vì gộp đòi hỏi đưa khái niệm này lên `shared` — việc đáng làm **khi có backend**, lúc đó cả hai bên đọc chung một endpoint và bản mock biến mất.
+
+## D-26 · Nạp Excel là tính năng đầu tiên chạm backend thật — và được phép thất bại
+
+`rulesService.importStandardSet()` **không phải mock**: nó gọi `apiClient.post` thật với `FormData` tới `POST /standard-sets/import`. Đây là chỗ duy nhất trong repo hiện gửi request ra ngoài.
+
+Phạm vi cố ý hẹp — **chỉ gửi file đi**. Không parse Excel ở client, không nạp kết quả vào danh sách, không cập nhật dropdown. Việc đọc file thành tiêu chí thuộc về backend, nơi có quy tắc đọc cột và có chỗ ghi.
+
+Backend chưa tồn tại nên lời gọi trả 404 và giao diện **hiện lỗi thật** ("Máy chủ trả về lỗi 404."). Đã cân nhắc giả lập thành công cho "đẹp demo" và bỏ, vì hai lý do: đường thành công giả không kiểm chứng được điều gì, và nó giấu mất đúng thứ cần thấy — hợp đồng với backend đã đi đúng dây chưa.
+
+Chi tiết cần giữ:
+
+- Kiểm file theo **đuôi file**, không theo `file.type`: Windows trả MIME rỗng hoặc `application/octet-stream` cho `.xlsx` tùy máy có cài Office hay không, lọc theo MIME sẽ chặn nhầm file hợp lệ. Đây chỉ là lớp chặn cho đỡ mất công gửi — backend vẫn phải kiểm lại.
+- `apiClient` nhận ra `FormData` và **không** tự đặt `Content-Type`, để trình duyệt sinh boundary. Đặt tay là hỏng multipart.
+- Chọn file khác thì gọi `mutation.reset()`, nếu không thông báo lỗi của lần gửi trước còn treo dưới file mới.
+- Đường dẫn endpoint là chỗ giữ chỗ, hợp đồng dự kiến ghi ngay trong `rules.service.ts`. `NEXT_PUBLIC_API_BASE_URL` chưa đặt thì gọi vào cùng origin.
+
+## T-16 · Next chèn sẵn một `role="alert"` rỗng — `getByRole("alert")` trong test phải giới hạn phạm vi
+
+Next dựng `<div role="alert" aria-live="assertive" id="__next-route-announcer__">` ở gốc trang để đọc tên trang khi điều hướng. Nó **luôn có mặt và thường rỗng**.
+
+Hệ quả: `page.locator('[role="alert"]').first()` trong Playwright có thể trúng thẻ này thay vì thông báo lỗi thật — test báo đỏ với thông báo rỗng, trong khi giao diện hiển thị hoàn toàn đúng. Mất một lượt debug mới ra.
+
+Cách xử lý: luôn giới hạn phạm vi, ví dụ `page.getByRole("dialog").getByRole("alert")`.
+
+## T-17 · Playwright không đọc được body của request multipart
+
+`request.postData()` và `request.postDataBuffer()` đều trả `null` khi body là `FormData` có file. Không kiểm được "file có thật sự nằm trong request không" từ phía trình duyệt.
+
+Cách xử lý đã dùng: dựng một HTTP server nhỏ ngoài repo, trỏ `NEXT_PUBLIC_API_BASE_URL` vào đó rồi đọc body nhận được ở phía server. Đây cũng là cách duy nhất kiểm được đường **thành công** và đường **lỗi có thông báo từ backend** khi backend thật chưa có.
+
+## D-27 · Cầu nối backend đầu tiên: hợp đồng lấy từ `docs/api/conventions.md`, không tự suy
+
+`shared/services/apiClient.ts` viết theo đúng envelope của backend (repo `arch-drawing-checker-backend`):
+
+```
+thành công      { "data": T }                     / { "data": T[], "meta": {…} }
+lỗi (mọi loại)  { "error": { statusCode, code, message, details?, … } }
+```
+
+Bản trước đọc `message` ở **cấp cao nhất** — đúng với một API tưởng tượng, sai với API thật. Hệ quả: mọi câu tiếng Việt backend soạn sẵn ("Chỉ nhận file Excel .xlsx (không nhận .xls, .csv).") bị vứt, người dùng chỉ thấy "Máy chủ trả về lỗi 415."
+
+Nguyên tắc rút ra: **`error.message` của backend là câu hiển thị cho người dùng, không phải log kỹ thuật** — giao diện dùng thẳng, chỉ nối thêm gợi ý hành động theo `error.code` (`IMPORT_ERROR_HINTS`). Tự soạn lại câu ở client là vừa trùng lặp vừa chắc chắn lệch.
+
+`ApiError` nay mang `code` (UPPER_SNAKE, để `switch`) và `details` (chỉ có ở `VALIDATION_FAILED`). `isNotImplemented` tách riêng `501` — backend đang ở giai đoạn khung xương, phần lớn endpoint trả 501, và đó **không phải lỗi hệ thống**: không mời thử lại.
+
+`NEXT_PUBLIC_API_BASE_URL` mặc định `http://localhost:4000/api/v1`. `.env.local` không commit (`.env*`), nên thêm `.env.example` kèm ngoại lệ `!.env.example` trong `.gitignore` để hợp đồng nằm trong repo.
+
+## D-28 · Khóa mock của rules, vì nó mô tả một hình dạng dữ liệu không tồn tại
+
+`MOCK_RULES` (67 tiêu chí) điền đủ `code`, `checkType`, `operator`, `value` cho **mọi** dòng. Dữ liệu thật đọc từ file CHTK (`TIEU CHI CHTK NHA O THAP TANG_gui CDS.xlsx`, 92 tiêu chí) qua backend:
+
+```
+code       null 41/92   (dòng biến thể theo loại nhà, không có mã riêng)
+checkType  null 92/92   (Excel không có cột này)
+operator   null 62/92
+value      null 62/92
+```
+
+Giữ mock chạy song song sẽ dựng giao diện theo một thực tế sai — và đó chính là điều đã xảy ra: `RuleRow` dựng cột giữa quanh `operator` + `value`, hai trường vắng mặt ở 2/3 số dòng thật.
+
+Hai file mock vẫn nằm trên đĩa, **comment từng dòng** (không bọc khối — bẫy T-15), export mảng rỗng để nơi còn import không gãy. Không khôi phục được: kiểu `Rule` nay đã khác.
+
+**Thứ luôn có và luôn đọc được là `title` + `requirement`** (nguyên văn cột "Tiêu chuẩn áp dụng"). Giao diện lấy đó làm gốc: cột giữa hiện `operator` + `value` khi đọc được, còn lại hiện `requirementLines[0]`; cột mã hiện `↳ parentCode` khi `code` rỗng; badge loại kiểm tra hiện `–` kèm giải thích khi chưa phân loại.
+
+Hệ quả ngoài feature rules: ô "Bộ tiêu chuẩn" của dashboard đọc `MOCK_RULES` nên giờ hiện **0/0 tiêu chí**, cho tới khi backend gỡ 501 ở `GET /{ws}/rules`.
+
+## D-29 · Bộ tiêu chuẩn vừa nạp giữ trong bộ nhớ phiên, mất khi tải lại trang
+
+`POST /{ws}/rules/import` đọc được Excel nhưng **chưa ghi CSDL**, và `GET /{ws}/rules` còn trả 501. Nên `rules.service.ts` giữ kết quả nạp trong một biến module (`sessionRuleSets`).
+
+Đã cân nhắc và bỏ `sessionStorage` (cách `features/reviews` đang dùng cho hồ sơ nháp): ở đây nó sẽ giả vờ một sự bền vững mà **máy chủ thật sự không có**, đúng thứ D-26 đã từ chối. Trạng thái rỗng nói thẳng lý do: "Máy chủ chưa lưu bộ đã nạp, nên tải lại trang là phải nhập lại", và modal nhắc lại sau khi nạp xong.
+
+Bỏ `sessionRuleSets` khi backend gỡ 501; lúc đó hai hàm `list*` chỉ còn một lời gọi `apiClient.get`, chữ ký giữ nguyên nên hook và container không phải sửa.
+
+## D-30 · `warnings[]` của lần nạp là thông tin hạng nhất, không phải log
+
+Backend trả kèm danh sách dòng đáng ngờ khi đọc Excel — file mẫu có 7: `DUPLICATE_CODE` ("Mã 5.3.3 trùng với dòng 122"), `UNKNOWN_HOUSE_TYPE`, `AMBIGUOUS_HOUSE_TYPE` ("\"Villa\" đứng riêng — đã hiểu là Single Villa, cần xác nhận"), `CODE_OUT_OF_ORDER`.
+
+Đây là những chỗ máy **đã đoán** khi đọc file gốc. Người thẩm định cần biết để mở file ra đối chiếu, nên modal hiện chúng kèm `sourceRow`, thu gọn trong `<details>` để không lấn át kết quả chính. Cùng lý do với nguyên tắc 6 (luôn hiện độ tin cậy cạnh kết luận tự động).
+
+## T-18 · Danh sách bộ lọc theo trường có thể rỗng — phải loại trừ tường minh
+
+`filters.checkType.includes(rule.checkType)` với `rule.checkType: CheckType | null` vừa sai kiểu vừa sai nghĩa. Quy ước đã chọn: tiêu chí **chưa có** giá trị thì **không khớp** khi người dùng lọc theo trường đó — lọc là để thu hẹp về những dòng chắc chắn thuộc nhóm đã chọn, không phải để gom cả những dòng chưa biết.
+
+## T-19 · `??` không trộn được với `||` mà không có ngoặc
+
+`{rule.requirementLines[0] ?? rule.requirement || "—"}` làm Turbopack gãy ngay khi parse: *"Nullish coalescing operator(??) requires parens when mixing with logical operators"*. Đây là lỗi cú pháp JS, không phải lỗi type — `npm run build` báo ở bước biên dịch chứ không phải bước type check.

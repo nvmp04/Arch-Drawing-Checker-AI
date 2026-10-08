@@ -12,6 +12,7 @@ import {
 import { STATUS_CONFIG } from "@/shared/constants/domain";
 import type { FindingStatus } from "@/shared/constants/enums";
 import type { BoundingBox } from "@/features/findings/types/finding.types";
+import { clamp } from "@/shared/utils/number";
 import { VIEWER_MAX_ZOOM_RATIO, VIEWER_MIN_ZOOM_RATIO } from "../constants/review.constants";
 
 /**
@@ -41,10 +42,6 @@ export type ViewerAnnotation = {
 };
 
 type Transform = { scale: number; x: number; y: number };
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
-}
 
 function computeFitTransform(
   viewportWidth: number,

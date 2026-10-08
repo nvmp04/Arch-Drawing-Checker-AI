@@ -85,9 +85,12 @@ function HouseTypeCheckbox({
 }
 
 export function AddRuleModal({
+  ruleSetId,
   onClose,
   onCreate,
 }: {
+  /** Bộ tiêu chuẩn nhận tiêu chí mới — endpoint thật là `POST /{ws}/rules/:ruleSetId/items`. */
+  ruleSetId: string;
   onClose: () => void;
   onCreate: (rule: Rule) => void;
 }) {
@@ -134,14 +137,18 @@ export function AddRuleModal({
     setError(null);
     setIsSubmitting(true);
     try {
-      const rule = await rulesService.createRule({
+      const rule = await rulesService.createRule(ruleSetId, {
         code: code.trim(),
         title: title.trim(),
-        checkType,
-        operator,
-        value: value.trim(),
+        // `isValid` đã chặn chuỗi rỗng, nhưng kiểu vẫn cho phép null vì tiêu
+        // chí đọc từ Excel thường thiếu hai trường này.
+        checkType: checkType || null,
+        operator: operator || null,
+        value: value.trim() || null,
+        // Ghi chú của người nhập đóng vai trò nguyên văn "Tiêu chuẩn áp dụng";
+        // không có thì lấy chính giá trị vừa nhập.
+        requirement: note.trim() || value.trim(),
         houseTypes: Array.from(houseTypes),
-        note: note.trim() || undefined,
         isActive,
       });
       onCreate(rule);

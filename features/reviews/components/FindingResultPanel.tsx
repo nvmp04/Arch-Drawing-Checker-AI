@@ -17,6 +17,7 @@ import {
   STATUS_ORDER,
 } from "@/shared/constants/domain";
 import type { FindingStatus } from "@/shared/constants/enums";
+import { percentOf } from "@/shared/utils/number";
 import { FindingResultCard } from "./FindingResultCard";
 
 type ResultTab = "action" | "all" | "passed";
@@ -103,7 +104,7 @@ export function FindingResultPanel({
 
   const concluded = totalOf(statusCounts) - statusCounts.unknown;
   const passed = PASSED_STATUSES.reduce((sum, s) => sum + statusCounts[s], 0);
-  const passRate = concluded > 0 ? Math.round((passed / concluded) * 100) : 0;
+  const passRate = percentOf(passed, concluded);
 
   const visible = useMemo(() => {
     const filtered =

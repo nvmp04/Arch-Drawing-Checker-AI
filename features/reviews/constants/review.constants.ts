@@ -31,9 +31,6 @@ export const PROCESSING_STEPS: readonly ProcessingStepDef[] = [
   { key: "aggregate", label: "Tổng hợp kết luận theo từng tiêu chí CHTK" },
 ];
 
-/** Người phụ trách mặc định cho hồ sơ vừa tạo — thay bằng người dùng đang đăng nhập khi có auth. */
-export const DRAFT_ASSIGNEE = { name: "Bạn", initials: "B" };
-
 /**
  * File PDF dùng chung cho mọi hồ sơ ở khung xem bản vẽ — chưa có backend lưu
  * file thật đã tải lên theo từng hồ sơ, nên tạm dùng chung một file thật

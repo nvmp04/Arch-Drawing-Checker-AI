@@ -11,6 +11,7 @@ import {
   XIcon,
 } from "@/shared/components/icons";
 import { TipTitle, Tooltip } from "@/shared/components/Tooltip";
+import { ApiError } from "@/shared/services/apiClient";
 import {
   CATEGORY_CONFIG,
   CATEGORY_ORDER,
@@ -18,23 +19,19 @@ import {
   HOUSE_TYPE_ORDER,
 } from "@/shared/constants/domain";
 import type { ChtkCategory, HouseType } from "@/shared/constants/enums";
+import { formatFileSize } from "@/shared/utils/format";
 import {
   CATEGORY_CHECK_DESCRIPTIONS,
   MAX_FILE_SIZE_MB,
   UPLOAD_ACCEPT,
 } from "../constants/review.constants";
-import { reviewsService } from "../services/reviews.service";
+import { useCreateReview } from "../hooks/useCreateReview";
 import type { ChtkStandardSet, ZoneOption } from "../types/review.types";
 
 const CONTROL_CLASS =
   "h-9 w-full rounded-md border border-border-default bg-surface-sunken px-3 text-sm text-text-primary " +
   "transition-colors duration-150 placeholder:text-text-muted hover:border-border-strong " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus";
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 function FormField({
   label,
@@ -59,6 +56,19 @@ function FormField({
       {children}
     </div>
   );
+}
+
+/**
+ * Câu hiển thị cho lỗi của lời gọi tạo hồ sơ. `message` của backend đã là
+ * tiếng Việt hiển thị được (`PAYLOAD_TOO_LARGE`, `UNSUPPORTED_MEDIA_TYPE`,
+ * `ZONE_NOT_FOUND`…) — giữ nguyên, chỉ nối thêm `details` của
+ * `VALIDATION_FAILED`.
+ */
+function createErrorMessage(error: Error): string {
+  if (!(error instanceof ApiError)) return error.message;
+  if (error.isNotImplemented) return "Máy chủ chưa hiện thực chức năng này.";
+  const details = error.details.length > 0 ? ` ${error.details.join(" ")}` : "";
+  return `${error.message}${details}`;
 }
 
 function PdfDropzone({
@@ -238,13 +248,15 @@ export function ReviewUploadForm({
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [zoneId, setZoneId] = useState("");
-  const [standardSetId, setStandardSetId] = useState("");
+  const [ruleSetId, setRuleSetId] = useState("");
   const [houseType, setHouseType] = useState<HouseType | null>(null);
   const [categories, setCategories] = useState<ReadonlySet<ChtkCategory>>(
     new Set(),
   );
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /** Lỗi do người dùng điền thiếu — tách khỏi lỗi của lời gọi tạo hồ sơ. */
+  const [validationError, setValidationError] = useState<string | null>(null);
+
+  const createReview = useCreateReview(workspaceSlug);
 
   const toggleCategory = (category: ChtkCategory) => {
     setCategories((prev) => {
@@ -259,36 +271,48 @@ export function ReviewUploadForm({
     file !== null &&
     name.trim().length > 0 &&
     zoneId !== "" &&
-    standardSetId !== "" &&
+    ruleSetId !== "" &&
     houseType !== null &&
     categories.size > 0;
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!isValid || !file || !houseType) {
-      setError(
+      setValidationError(
         "Điền đủ thông tin, chọn file PDF và ít nhất một nhóm tiêu chí trước khi tải lên.",
       );
       return;
     }
 
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      const review = await reviewsService.createReview({
+    setValidationError(null);
+    createReview.mutate(
+      {
         name: name.trim(),
         zoneId,
-        standardSetId,
+        ruleSetId,
         houseType,
         categories: Array.from(categories),
-        file: { name: file.name, sizeBytes: file.size },
-      });
-      router.push(`/${workspaceSlug}/reviews/${review.id}/processing`);
-    } catch {
-      setError("Không tạo được hồ sơ. Thử lại sau.");
-      setIsSubmitting(false);
-    }
+        file,
+      },
+      {
+        // Điều hướng trong callback của lần gọi này, không trong `onSuccess`
+        // của hook: việc chuyển trang là trách nhiệm của nơi bấm nút chứ
+        // không phải của lớp dữ liệu.
+        onSuccess: (review) =>
+          router.push(`/${workspaceSlug}/reviews/${review.id}/processing`),
+      },
+    );
   };
+
+  const errorMessage =
+    validationError ??
+    (createReview.error ? createErrorMessage(createReview.error) : null);
+
+  /**
+   * Giữ nút khóa cả sau khi tạo xong: `router.push` chưa rời trang ngay, và
+   * bấm lần hai sẽ tạo thêm một hồ sơ nữa.
+   */
+  const isBusy = createReview.isPending || createReview.isSuccess;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -332,8 +356,8 @@ export function ReviewUploadForm({
         <FormField label="Tiêu chuẩn CHTK" htmlFor="review-standard" required>
           <select
             id="review-standard"
-            value={standardSetId}
-            onChange={(event) => setStandardSetId(event.target.value)}
+            value={ruleSetId}
+            onChange={(event) => setRuleSetId(event.target.value)}
             className={CONTROL_CLASS}
           >
             <option value="">Chọn bộ tiêu chuẩn đã tải lên</option>
@@ -382,23 +406,23 @@ export function ReviewUploadForm({
         </div>
       </section>
 
-      {error && (
-        <p className="flex items-center gap-2 text-sm text-fail-text">
+      {errorMessage && (
+        <p role="alert" className="flex items-center gap-2 text-sm text-fail-text">
           <AlertTriangleIcon className="size-4 shrink-0" />
-          {error}
+          {errorMessage}
         </p>
       )}
 
       <div className="flex justify-end">
         <button
           type="submit"
-          disabled={!isValid || isSubmitting}
+          disabled={!isValid || isBusy}
           className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-4 text-sm font-medium text-text-on-accent
                      transition-colors duration-150 hover:bg-accent-hover
                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus
                      disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSubmitting ? "Đang tải lên..." : "Tải lên và bắt đầu phân tích"}
+          {isBusy ? "Đang tải lên..." : "Tải lên và bắt đầu phân tích"}
         </button>
       </div>
     </form>

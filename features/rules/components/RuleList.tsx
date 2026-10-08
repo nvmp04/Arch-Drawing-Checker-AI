@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/shared/components/EmptyState";
-import { TipText, Tooltip } from "@/shared/components/Tooltip";
-import { PlusIcon, UploadIcon } from "@/shared/components/icons";
+import { PlusIcon } from "@/shared/components/icons";
 import { CATEGORY_CONFIG, CATEGORY_ORDER } from "@/shared/constants/domain";
 import type { Rule, RuleFilterState } from "../types/rule.types";
 import { EMPTY_RULE_FILTER } from "../types/rule.types";
@@ -21,10 +20,19 @@ function matches(rule: Rule, filters: RuleFilterState): boolean {
   if (filters.category.length > 0 && !filters.category.includes(rule.category)) {
     return false;
   }
-  if (filters.checkType.length > 0 && !filters.checkType.includes(rule.checkType)) {
+  // `checkType` và `operator` có thể rỗng trong dữ liệu thật. Tiêu chí chưa có
+  // giá trị thì **không khớp** khi người dùng lọc theo trường đó — lọc là để
+  // thu hẹp về những dòng chắc chắn thuộc nhóm đã chọn.
+  if (
+    filters.checkType.length > 0 &&
+    (rule.checkType === null || !filters.checkType.includes(rule.checkType))
+  ) {
     return false;
   }
-  if (filters.operator.length > 0 && !filters.operator.includes(rule.operator)) {
+  if (
+    filters.operator.length > 0 &&
+    (rule.operator === null || !filters.operator.includes(rule.operator))
+  ) {
     return false;
   }
   if (
@@ -36,7 +44,14 @@ function matches(rule: Rule, filters: RuleFilterState): boolean {
   return true;
 }
 
-export function RuleList({ rules: initialRules }: { rules: readonly Rule[] }) {
+export function RuleList({
+  rules: initialRules,
+  ruleSetId,
+}: {
+  rules: readonly Rule[];
+  /** Bộ chứa các tiêu chí này — tiêu chí thêm bằng tay phải thuộc về một bộ. */
+  ruleSetId: string;
+}) {
   /** Danh sách tiêu chí — cục bộ để tiêu chí thêm mới xuất hiện ngay, chưa nối API. */
   const [rules, setRules] = useState<readonly Rule[]>(initialRules);
   const [filters, setFilters] = useState<RuleFilterState>(EMPTY_RULE_FILTER);
@@ -65,28 +80,25 @@ export function RuleList({ rules: initialRules }: { rules: readonly Rule[] }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-end gap-2">
-        <Tooltip
-          align="right"
-          content={<TipText>Nhập tiêu chí hàng loạt từ Excel sẽ có trong giai đoạn sau.</TipText>}
-        >
-          <button
-            type="button"
-            disabled
-            aria-disabled
-            className="inline-flex h-9 items-center gap-2 rounded-md px-3 text-sm text-text-muted
-                       shadow-ds-border transition-colors duration-150
-                       disabled:cursor-not-allowed disabled:opacity-55"
-          >
-            <UploadIcon className="size-4" />
-            Nhập Excel
-          </button>
-        </Tooltip>
+      {/*
+        Thanh lọc và nút thêm tiêu chí nằm cùng hàng vì cùng thao tác ở cấp
+        "một tiêu chí bên trong bộ đang xem". Việc ở cấp cả bộ (chọn bộ, nạp
+        Excel) nằm ở `StandardSetBar` phía trên.
+      */}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <RuleFilterBar
+            filters={filters}
+            onChange={setFilters}
+            resultCount={visible.length}
+            totalCount={rules.length}
+          />
+        </div>
 
         <button
           type="button"
           onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex h-9 items-center gap-2 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent
+          className="inline-flex h-9 shrink-0 items-center gap-2 rounded-md bg-accent px-3 text-sm font-medium text-text-on-accent
                      transition-colors duration-150 hover:bg-accent-hover
                      focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-border-focus"
         >
@@ -94,13 +106,6 @@ export function RuleList({ rules: initialRules }: { rules: readonly Rule[] }) {
           Thêm tiêu chí mới
         </button>
       </div>
-
-      <RuleFilterBar
-        filters={filters}
-        onChange={setFilters}
-        resultCount={visible.length}
-        totalCount={rules.length}
-      />
 
       {grouped.length === 0 ? (
         <div className="rounded-lg bg-surface-raised px-4 py-10 text-center shadow-ds-small">
@@ -152,6 +157,7 @@ export function RuleList({ rules: initialRules }: { rules: readonly Rule[] }) {
 
       {isAddModalOpen && (
         <AddRuleModal
+          ruleSetId={ruleSetId}
           onClose={() => setIsAddModalOpen(false)}
           onCreate={(rule) => {
             setRules((prev) => [rule, ...prev]);
